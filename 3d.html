@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AgriSentry — 3D block view</title>
-<meta name="description" content="An interactive 3D view of farm blocks coloured by risk status — part of the AgriSentry portfolio prototype. Synthetic data; runs entirely in the browser.">
+<title>AgriSentry — 3D farm view</title>
+<meta name="description" content="An interactive low-poly 3D farm — blocks flagged by risk status — modelled on a typical Tasmanian mixed farm layout. Part of the AgriSentry portfolio prototype. Synthetic data; runs entirely in the browser.">
 <style>
   :root{
     --green-deep:#153C29; --green:#1B5E20; --green-soft:#2E7D4F;
@@ -27,6 +27,9 @@
   .lang-btn{background:transparent;color:#cfe0d4;border:0;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
   .lang-btn[aria-pressed="true"]{background:var(--amber-lt);color:#153C29;}
 
+  .previewbar{flex:none;background:#F3E7CE;border-bottom:1px solid #E6D3A8;color:#6b5418;font-size:13px;text-align:center;padding:7px 16px;line-height:1.45;}
+  .previewbar b{color:#8a5a12;}
+
   main{flex:1;position:relative;min-height:0;}
   #stage{position:absolute;inset:0;}
   #stage canvas{display:block;}
@@ -46,8 +49,6 @@
   .legend .item{display:flex;align-items:center;gap:8px;margin-top:5px;color:#43514a;}
   .dot{width:13px;height:13px;border-radius:3px;flex:none;}
   .d-ok{background:var(--green-soft);} .d-watch{background:var(--amber-lt);} .d-alert{background:var(--red);}
-  .previewbar{flex:none;background:#F3E7CE;border-bottom:1px solid #E6D3A8;color:#6b5418;font-size:13px;text-align:center;padding:7px 16px;line-height:1.45;}
-  .previewbar b{color:#8a5a12;}
   .hintbar{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(21,60,41,.82);color:#EAF2EC;font-size:13px;padding:8px 16px;border-radius:100px;white-space:nowrap;}
   .note{position:absolute;right:16px;bottom:16px;font-size:11px;color:var(--muted);}
 
@@ -67,7 +68,7 @@
 <header>
   <div>
     <span class="brand serif">AgriSentry</span>
-    <span class="sub" data-en="3D block view · synthetic" data-zh="3D 地块视图 · 合成">3D block view · synthetic</span>
+    <span class="sub" data-en="3D farm view · synthetic" data-zh="3D 农场视图 · 合成">3D farm view · synthetic</span>
   </div>
   <div class="spacer"></div>
   <div class="langbar" role="group" aria-label="Language">
@@ -77,7 +78,7 @@
   <a class="back" href="index.html" data-en="← Back" data-zh="← 返回">← Back</a>
 </header>
 
-<div class="previewbar" data-en="◆ Preview — a concept view. Blocks, crops, layout and visual style are customised per farm or client; this is not the final look." data-zh="◆ 预览效果 —— 概念演示。地块、作物、布局与视觉风格均可按农场或客户个性化定制,这不是最终外观。">◆ Preview — a concept view. Blocks, crops, layout and visual style are customised per farm or client; this is not the final look.</div>
+<div class="previewbar" data-en="◆ Preview — a concept view, laid out like a typical Tasmanian mixed farm. Blocks, crops, layout and visual style are customised per farm or client; this is not the final look." data-zh="◆ 预览效果 —— 概念演示,按塔州典型混合农场的样子布局。地块、作物、布局与视觉风格均可按农场或客户个性化定制,这不是最终外观。">◆ Preview — a concept view, laid out like a typical Tasmanian mixed farm. Blocks, crops, layout and visual style are customised per farm or client; this is not the final look.</div>
 
 <main>
   <div id="stage"></div>
@@ -103,7 +104,7 @@
 
   <div id="loading">
     <div class="spin" id="spin"></div>
-    <div id="loadtext" data-en="Loading 3D view…" data-zh="正在加载 3D 视图…">Loading 3D view…</div>
+    <div id="loadtext" data-en="Loading 3D farm…" data-zh="正在加载 3D 农场…">Loading 3D farm…</div>
     <div id="err"></div>
   </div>
 </main>
@@ -133,7 +134,6 @@
     st.className='badge s-'+b.status;
     document.getElementById('p-alerts').textContent=b.alerts;
   }
-  // called by the 3D module when a block is picked
   window.selectBlock=function(b){
     selectedBlock=b;
     document.getElementById('panel').style.display='block';
@@ -188,25 +188,40 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 
 window.__booted = true;
 
-const COLORS = { ok:0x2E7D4F, watch:0xE0A24B, alert:0xC0392B };
-const SP = 3.3;
+/* ---------- palette ---------- */
+const COL = {
+  sky:0xBFD9E6, pasture:0x86A94E, pastureDk:0x6F9140,
+  soil:0x8D6E63, soilTilled:0x9C6B4A, track:0xCBB58C,
+  water:0x3E86A8, waterRim:0x7C6A4A,
+  trunk:0x6D4C41, canopy1:0x4CAF50, canopy2:0x43A047, canopy3:0x66BB6A,
+  firA:0x2E7D32, firB:0x388E3C, firC:0x43A047,
+  vine:0x7CB342, net:0xFFFFFF, tunnel:0xEAF4F7,
+  shed:0x7C8A6E, shedRoof:0x455047, silo:0xB9C2C9, siloTop:0x8A969E,
+  statusOk:0x2E7D4F, statusWatch:0xE0A24B, statusAlert:0xC0392B
+};
+const STATUS_HEX = { ok:COL.statusOk, watch:COL.statusWatch, alert:COL.statusAlert };
+
+/* ---------- blocks (same data model as the panel) ---------- */
+const BW = 6, BD = 6;           // block footprint
 const BLOCKS = [
-  {code:'VIN-01', crop:{en:'Vineyard',zh:'葡萄园'},     rule:{en:'Frost risk',zh:'霜冻风险'},            status:'alert', alerts:9, gx:-1, gz:-1},
-  {code:'POT-02', crop:{en:'Potato',zh:'马铃薯'},       rule:{en:'Late blight',zh:'晚疫病'},             status:'watch', alerts:4, gx:0,  gz:-1},
-  {code:'CHE-03', crop:{en:'Cherry',zh:'樱桃'},         rule:{en:'Rain-cracking',zh:'裂果'},             status:'ok',    alerts:0, gx:1,  gz:-1},
-  {code:'APP-04', crop:{en:'Apple',zh:'苹果'},          rule:{en:'Apple scab',zh:'苹果黑星病'},          status:'watch', alerts:3, gx:-1, gz:1},
-  {code:'BER-05', crop:{en:'Berry',zh:'浆果'},          rule:{en:'Botrytis (grey mould)',zh:'灰霉病'},   status:'alert', alerts:7, gx:0,  gz:1},
-  {code:'VEG-06', crop:{en:'Leafy greens',zh:'叶菜'},   rule:{en:'Irrigation need',zh:'灌溉需求'},       status:'ok',    alerts:0, gx:1,  gz:1},
+  {code:'VIN-01', type:'vineyard', crop:{en:'Vineyard',zh:'葡萄园'},   rule:{en:'Frost risk',zh:'霜冻风险'},          status:'alert', alerts:9, bx:-8, bz:-4.5},
+  {code:'POT-02', type:'potato',   crop:{en:'Potato',zh:'马铃薯'},     rule:{en:'Late blight',zh:'晚疫病'},           status:'watch', alerts:4, bx:0,  bz:-4.5},
+  {code:'CHE-03', type:'cherry',   crop:{en:'Cherry',zh:'樱桃'},       rule:{en:'Rain-cracking',zh:'裂果'},           status:'ok',    alerts:0, bx:8,  bz:-4.5},
+  {code:'APP-04', type:'apple',    crop:{en:'Apple',zh:'苹果'},        rule:{en:'Apple scab',zh:'苹果黑星病'},        status:'watch', alerts:3, bx:-8, bz:4.5},
+  {code:'BER-05', type:'berry',    crop:{en:'Berry',zh:'浆果'},        rule:{en:'Botrytis (grey mould)',zh:'灰霉病'}, status:'alert', alerts:7, bx:0,  bz:4.5},
+  {code:'VEG-06', type:'leafy',    crop:{en:'Leafy greens',zh:'叶菜'}, rule:{en:'Irrigation need',zh:'灌溉需求'},     status:'ok',    alerts:0, bx:8,  bz:4.5},
 ];
 
+/* ---------- renderer / scene ---------- */
 const stage = document.getElementById('stage');
 let W = stage.clientWidth, H = stage.clientHeight;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xF5F2E9);
+scene.background = new THREE.Color(COL.sky);
+scene.fog = new THREE.Fog(COL.sky, 46, 95);
 
-const camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 200);
-camera.position.set(7, 7.5, 9.5);
+const camera = new THREE.PerspectiveCamera(42, W/H, 0.1, 300);
+camera.position.set(19, 17, 23);
 
 const renderer = new THREE.WebGLRenderer({ antialias:true });
 renderer.setSize(W, H);
@@ -226,80 +241,308 @@ stage.appendChild(labelRenderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
-controls.minDistance = 6;
-controls.maxDistance = 26;
-controls.maxPolarAngle = Math.PI/2 - 0.04;
-controls.target.set(0, 0.3, 0);
+controls.minDistance = 10;
+controls.maxDistance = 55;
+controls.maxPolarAngle = Math.PI/2 - 0.05;
+controls.target.set(0, 0.5, 1);
 
-scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc6ad, 0.75));
-const sun = new THREE.DirectionalLight(0xffffff, 1.6);
-sun.position.set(6, 12, 5);
+/* ---------- lights ---------- */
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9fb08a, 0.7));
+const sun = new THREE.DirectionalLight(0xfff4e0, 1.5);
+sun.position.set(14, 22, 10);
 sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-sun.shadow.camera.near = 1; sun.shadow.camera.far = 40;
-sun.shadow.camera.left = -12; sun.shadow.camera.right = 12;
-sun.shadow.camera.top = 12; sun.shadow.camera.bottom = -12;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 70;
+sun.shadow.camera.left = -28; sun.shadow.camera.right = 28;
+sun.shadow.camera.top = 28; sun.shadow.camera.bottom = -28;
+sun.shadow.bias = -0.0004;
 scene.add(sun);
 
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(17, 14),
-  new THREE.MeshStandardMaterial({ color:0xDAD3BE, roughness:1 })
-);
-ground.rotation.x = -Math.PI/2;
-ground.receiveShadow = true;
-scene.add(ground);
+/* ---------- helpers ---------- */
+function M(color, extra){ return new THREE.MeshStandardMaterial(Object.assign({color:color, roughness:0.92, metalness:0.0, flatShading:true}, extra||{})); }
+function mesh(geo, material, cast, rec){ const m=new THREE.Mesh(geo, material); if(cast) m.castShadow=true; if(rec) m.receiveShadow=true; return m; }
 
-const grid = new THREE.GridHelper(17, 17, 0xBDB79E, 0xCFC9B4);
-grid.position.y = 0.012;
-scene.add(grid);
-
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-const pickables = [];
-const beacons = [];
-
-BLOCKS.forEach(b => {
-  const h = b.status==='alert' ? 0.9 : b.status==='watch' ? 0.65 : 0.5;
-  const mat = new THREE.MeshStandardMaterial({ color:COLORS[b.status], roughness:0.72, metalness:0.04 });
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(2.4, h, 2.4), mat);
-  mesh.position.set(b.gx*SP, h/2, b.gz*SP);
-  mesh.castShadow = true; mesh.receiveShadow = true;
-  mesh.userData.block = b;
-  scene.add(mesh);
-  pickables.push(mesh);
-  b._mesh = mesh;
-
-  const div = document.createElement('div');
-  div.className = 'blk-label';
-  div.textContent = b.code;
-  const label = new CSS2DObject(div);
-  label.position.set(0, h + 0.55, 0);
-  mesh.add(label);
-
-  if (b.status === 'alert') {
-    const beacon = new THREE.Mesh(
-      new THREE.SphereGeometry(0.22, 20, 20),
-      new THREE.MeshStandardMaterial({ color:0xC0392B, emissive:0xC0392B, emissiveIntensity:0.9, roughness:0.4 })
-    );
-    beacon.position.set(b.gx*SP, h + 1.25, b.gz*SP);
-    scene.add(beacon);
-    const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.34, 0.46, 32),
-      new THREE.MeshBasicMaterial({ color:0xC0392B, transparent:true, opacity:0.6, side:THREE.DoubleSide })
-    );
-    ring.rotation.x = -Math.PI/2;
-    ring.position.set(b.gx*SP, h + 0.05, b.gz*SP);
-    scene.add(ring);
-    beacons.push({ beacon, ring, baseY:h + 1.25 });
+function lowTree(s, canopyCol){
+  const g = new THREE.Group();
+  const trunk = mesh(new THREE.CylinderGeometry(0.12*s, 0.17*s, 0.8*s, 6), M(COL.trunk), true, false);
+  trunk.position.y = 0.4*s; g.add(trunk);
+  const c1 = mesh(new THREE.IcosahedronGeometry(0.72*s, 0), M(canopyCol), true, false);
+  c1.position.y = 1.15*s; g.add(c1);
+  const c2 = mesh(new THREE.IcosahedronGeometry(0.5*s, 0), M(canopyCol), true, false);
+  c2.position.set(0.28*s, 1.55*s, 0.12*s); g.add(c2);
+  return g;
+}
+function fir(s){
+  const g = new THREE.Group();
+  const trunk = mesh(new THREE.CylinderGeometry(0.1*s, 0.13*s, 0.5*s, 6), M(0x5D4037), true, false);
+  trunk.position.y = 0.25*s; g.add(trunk);
+  const cols = [COL.firA, COL.firB, COL.firC];
+  for(let i=0;i<3;i++){
+    const cone = mesh(new THREE.ConeGeometry((0.85-i*0.22)*s, 0.95*s, 7), M(cols[i]), true, false);
+    cone.position.y = (0.75 + i*0.62)*s; g.add(cone);
   }
-});
-
-function setSelected(b){
-  for (const m of pickables){ m.material.emissive.setHex(0x000000); m.material.emissiveIntensity = 1; }
-  if (b && b._mesh){ b._mesh.material.emissive.setHex(0x3A3320); b._mesh.material.emissiveIntensity = 0.55; }
-  if (b && window.selectBlock) window.selectBlock(b);
+  return g;
 }
 
+/* ---------- ground, hills, boundary ---------- */
+const ground = mesh(new THREE.PlaneGeometry(90, 76), M(COL.pasture), false, true);
+ground.rotation.x = -Math.PI/2; ground.position.y = 0; scene.add(ground);
+
+// rolling hills behind the farm
+(function hills(){
+  const data = [[-26,-30,10,0x7EA048],[6,-34,14,0x749642],[30,-28,11,0x86A94E]];
+  for(const [x,z,r,c] of data){
+    const h = mesh(new THREE.IcosahedronGeometry(r, 1), M(c), false, true);
+    h.position.set(x, -r*0.62, z); h.scale.y = 0.4; scene.add(h);
+  }
+})();
+
+// farm boundary field (slightly darker rectangle under the blocks)
+const field = mesh(new THREE.BoxGeometry(34, 0.08, 26), M(COL.pastureDk), false, true);
+field.position.set(0, 0.04, 0); scene.add(field);
+
+/* ---------- access tracks (dirt) ---------- */
+function track(w, d, x, z){
+  const t = mesh(new THREE.BoxGeometry(w, 0.1, d), M(COL.track), false, true);
+  t.position.set(x, 0.1, z); scene.add(t);
+}
+track(34, 2.2, 0, 0);        // central horizontal track between the two rows
+track(2.2, 26, -4, 0);       // vertical tracks between columns
+track(2.2, 26, 4, 0);
+track(5, 10, 0, 15.5);       // main entrance track to the farmyard
+
+/* ---------- blocks ---------- */
+const pads = [];             // raycast targets
+const beacons = [];
+
+function buildBlock(b){
+  const g = new THREE.Group();
+  g.position.set(b.bx, 0, b.bz);
+  b._group = g;
+
+  // soil / plot pad (the clickable target)
+  const tilled = (b.type==='potato' || b.type==='leafy' || b.type==='berry');
+  const pad = mesh(new THREE.BoxGeometry(BW, 0.2, BD), M(tilled ? COL.soilTilled : COL.pasture), true, true);
+  pad.position.y = 0.2; pad.userData.block = b; g.add(pad); pads.push(pad);
+
+  // status edging frame
+  const em = M(STATUS_HEX[b.status], {roughness:0.6});
+  const t = 0.35, hy = 0.42;
+  const edges = [
+    [BW, hy, t, 0, (BD/2 - t/2)], [BW, hy, t, 0, -(BD/2 - t/2)],
+    [t, hy, BD, (BW/2 - t/2), 0], [t, hy, BD, -(BW/2 - t/2), 0]
+  ];
+  for(const [w,h,d,x,z] of edges){
+    const e = mesh(new THREE.BoxGeometry(w,h,d), em, true, false);
+    e.position.set(x, 0.3, z); g.add(e);
+  }
+
+  // crop decor
+  if(b.type==='vineyard') buildVineyard(g);
+  else if(b.type==='potato') buildPotato(g);
+  else if(b.type==='cherry') buildOrchard(g, true, 0xD3415B);   // netted, with cherries
+  else if(b.type==='apple') buildOrchard(g, false, 0xC0392B);
+  else if(b.type==='berry') buildTunnels(g);
+  else if(b.type==='leafy') buildLeafy(g);
+
+  // marker post + flag
+  const post = mesh(new THREE.CylinderGeometry(0.07,0.07,1.6,6), M(0x8d8d8d), true, false);
+  post.position.set(-BW/2 + 0.4, 0.9, -BD/2 + 0.4); g.add(post);
+  const flag = mesh(new THREE.BoxGeometry(0.7,0.45,0.08), M(STATUS_HEX[b.status], {roughness:0.5}), true, false);
+  flag.position.set(-BW/2 + 0.78, 1.45, -BD/2 + 0.4); g.add(flag);
+
+  // label
+  const div = document.createElement('div');
+  div.className = 'blk-label'; div.textContent = b.code;
+  const label = new CSS2DObject(div);
+  label.position.set(0, 2.4, 0); g.add(label);
+
+  // alert beacon
+  if(b.status==='alert'){
+    const beacon = mesh(new THREE.SphereGeometry(0.26, 18, 18),
+      new THREE.MeshStandardMaterial({color:0xC0392B, emissive:0xC0392B, emissiveIntensity:0.9, roughness:0.4, flatShading:true}), false, false);
+    beacon.position.set(0, 3.1, 0); g.add(beacon);
+    const ring = mesh(new THREE.RingGeometry(0.4, 0.55, 28),
+      new THREE.MeshBasicMaterial({color:0xC0392B, transparent:true, opacity:0.6, side:THREE.DoubleSide}), false, false);
+    ring.rotation.x = -Math.PI/2; ring.position.set(0, 0.46, 0); g.add(ring);
+    beacons.push({beacon, ring, baseY:3.1});
+  }
+
+  scene.add(g);
+}
+
+function buildVineyard(g){
+  const rows = 5, len = BD - 1.2;
+  for(let r=0;r<rows;r++){
+    const x = -BW/2 + 1.0 + r*((BW-2)/(rows-1));
+    // trellis wire line
+    const wire = mesh(new THREE.BoxGeometry(0.05, 0.05, len), M(0x9a9a9a), false, false);
+    wire.position.set(x, 0.95, 0); g.add(wire);
+    // end posts
+    for(const z of [-len/2, len/2]){
+      const p = mesh(new THREE.CylinderGeometry(0.05,0.05,1.1,5), M(0x7d6b57), true, false);
+      p.position.set(x, 0.85, z); g.add(p);
+    }
+    // vines
+    const n = 6;
+    for(let i=0;i<n;i++){
+      const z = -len/2 + (i+0.5)*(len/n);
+      const v = mesh(new THREE.IcosahedronGeometry(0.33, 0), M(COL.vine), true, false);
+      v.position.set(x, 0.75, z); g.add(v);
+    }
+  }
+}
+
+function buildPotato(g){
+  const rows = 6, len = BD - 1.0;
+  for(let r=0;r<rows;r++){
+    const x = -BW/2 + 0.9 + r*((BW-1.8)/(rows-1));
+    const ridge = mesh(new THREE.BoxGeometry(0.45, 0.28, len), M(COL.soil), true, true);
+    ridge.position.set(x, 0.42, 0); g.add(ridge);
+    const n = 5;
+    for(let i=0;i<n;i++){
+      const z = -len/2 + (i+0.5)*(len/n);
+      const leaf = mesh(new THREE.IcosahedronGeometry(0.22, 0), M(0x5E9A3A), false, false);
+      leaf.position.set(x, 0.62, z); leaf.scale.y = 0.7; g.add(leaf);
+    }
+  }
+}
+
+function buildOrchard(g, netted, fruitCol){
+  const cols = 3, rowz = 4;
+  for(let c=0;c<cols;c++){
+    for(let r=0;r<rowz;r++){
+      const x = -BW/2 + 1.1 + c*((BW-2.2)/(cols-1));
+      const z = -BD/2 + 1.0 + r*((BD-2.0)/(rowz-1));
+      const tree = lowTree(0.9, COL.canopy2);
+      tree.position.set(x, 0.3, z); g.add(tree);
+      // a few fruit dots
+      for(let k=0;k<3;k++){
+        const f = mesh(new THREE.SphereGeometry(0.08, 6, 6), M(fruitCol, {roughness:0.4}), false, false);
+        f.position.set(x + (Math.random()-0.5)*0.9, 1.1 + Math.random()*0.5, z + (Math.random()-0.5)*0.9);
+        g.add(f);
+      }
+    }
+  }
+  if(netted){
+    const net = mesh(new THREE.BoxGeometry(BW-0.6, 0.04, BD-0.6),
+      new THREE.MeshStandardMaterial({color:COL.net, transparent:true, opacity:0.16, roughness:1}), false, false);
+    net.position.set(0, 2.5, 0); g.add(net);
+    for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){
+      const p = mesh(new THREE.CylinderGeometry(0.06,0.06,2.5,6), M(0x8d8d8d), true, false);
+      p.position.set(sx*(BW/2-0.6), 1.25, sz*(BD/2-0.6)); g.add(p);
+    }
+  }
+}
+
+function buildTunnels(g){
+  const n = 4, len = BD - 1.0;
+  for(let i=0;i<n;i++){
+    const x = -BW/2 + 1.0 + i*((BW-2)/(n-1));
+    const geo = new THREE.CylinderGeometry(0.7, 0.7, len, 10, 1, true, 0, Math.PI);
+    const tun = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:COL.tunnel, transparent:true, opacity:0.5, side:THREE.DoubleSide, roughness:0.6, flatShading:true}));
+    tun.rotation.z = Math.PI/2; tun.rotation.y = Math.PI/2; tun.position.set(x, 0.75, 0); g.add(tun);
+    // berries inside (green rows)
+    const row = mesh(new THREE.BoxGeometry(0.4, 0.3, len-0.4), M(0x4E8F39), false, false);
+    row.position.set(x, 0.45, 0); g.add(row);
+  }
+}
+
+function buildLeafy(g){
+  const rows = 6, len = BD - 1.0;
+  for(let r=0;r<rows;r++){
+    const x = -BW/2 + 0.9 + r*((BW-1.8)/(rows-1));
+    const n = 7;
+    for(let i=0;i<n;i++){
+      const z = -len/2 + (i+0.5)*(len/n);
+      const p = mesh(new THREE.IcosahedronGeometry(0.2, 0), M(0x7CB342), false, false);
+      p.position.set(x, 0.42, z); p.scale.y = 0.6; g.add(p);
+    }
+  }
+}
+
+BLOCKS.forEach(buildBlock);
+
+/* ---------- farmyard (sheds + silo) ---------- */
+(function farmyard(){
+  const yard = new THREE.Group(); yard.position.set(-3, 0, 15.5);
+  const dirt = mesh(new THREE.BoxGeometry(12, 0.08, 7), M(COL.track), false, true);
+  dirt.position.y = 0.09; yard.add(dirt);
+
+  // machinery shed (gable)
+  const shed = new THREE.Group(); shed.position.set(-3.2, 0, 0);
+  const body = mesh(new THREE.BoxGeometry(4.4, 2.2, 3.4), M(COL.shed), true, true);
+  body.position.y = 1.2; shed.add(body);
+  const roof = mesh(new THREE.CylinderGeometry(0.01, 2.5, 1.3, 4, 1), M(COL.shedRoof), true, false);
+  roof.rotation.y = Math.PI/4; roof.position.y = 2.9; roof.scale.z = 1.36; shed.add(roof);
+  yard.add(shed);
+
+  // packing shed (low pitch, longer)
+  const pack = mesh(new THREE.BoxGeometry(5.2, 2.0, 3.0), M(0x8c9a80), true, true);
+  pack.position.set(2.0, 1.1, 0.2); yard.add(pack);
+  const packRoof = mesh(new THREE.BoxGeometry(5.6, 0.25, 3.4), M(COL.shedRoof), true, false);
+  packRoof.position.set(2.0, 2.2, 0.2); yard.add(packRoof);
+
+  // silo
+  const silo = new THREE.Group(); silo.position.set(4.9, 0, -1.7);
+  const cyl = mesh(new THREE.CylinderGeometry(0.95, 0.95, 3.4, 14), M(COL.silo, {metalness:0.2, roughness:0.5}), true, false);
+  cyl.position.y = 1.7; silo.add(cyl);
+  const top = mesh(new THREE.ConeGeometry(1.02, 0.9, 14), M(COL.siloTop, {metalness:0.2, roughness:0.5}), true, false);
+  top.position.y = 3.85; silo.add(top);
+  yard.add(silo);
+
+  scene.add(yard);
+})();
+
+/* ---------- irrigation dam ---------- */
+(function dam(){
+  const g = new THREE.Group(); g.position.set(16, 0, -10);
+  const berm = mesh(new THREE.CylinderGeometry(4.3, 4.6, 0.5, 20), M(COL.waterRim), false, true);
+  berm.position.y = 0.2; g.add(berm);
+  const water = mesh(new THREE.CylinderGeometry(3.7, 3.7, 0.4, 24),
+    new THREE.MeshStandardMaterial({color:COL.water, roughness:0.25, metalness:0.1, transparent:true, opacity:0.92, flatShading:true}), false, false);
+  water.position.y = 0.34; g.add(water);
+  scene.add(g);
+})();
+
+/* ---------- shelterbelts (windbreaks) ---------- */
+(function shelterbelts(){
+  // left and right edges
+  for(let i=0;i<7;i++){
+    const z = -11 + i*3.4;
+    const l = fir(1.1 + (i%2)*0.2); l.position.set(-15.5, 0, z); scene.add(l);
+    const r = fir(1.1 + ((i+1)%2)*0.2); r.position.set(15.5, 0, z); scene.add(r);
+  }
+  // back edge
+  for(let i=0;i<9;i++){
+    const x = -14 + i*3.5;
+    const t = fir(1.0 + (i%3===0?0.3:0)); t.position.set(x, 0, -13.5); scene.add(t);
+  }
+  // a couple of shade trees near the yard
+  const a = lowTree(1.2, COL.canopy1); a.position.set(-10.5, 0, 14); scene.add(a);
+  const b = lowTree(1.0, COL.canopy3); b.position.set(3.5, 0, 17.5); scene.add(b);
+})();
+
+/* ---------- selection ---------- */
+const selRing = mesh(new THREE.RingGeometry(4.0, 4.5, 36),
+  new THREE.MeshBasicMaterial({color:0x153C29, transparent:true, opacity:0.55, side:THREE.DoubleSide}), false, false);
+selRing.rotation.x = -Math.PI/2; selRing.position.y = 0.22; selRing.visible = false; scene.add(selRing);
+
+let selBlock = null;
+function setSelected(b){
+  if(selBlock && selBlock._group) selBlock._group.position.y = 0;
+  selBlock = b;
+  if(b && b._group){
+    b._group.position.y = 0.25;
+    selRing.visible = true;
+    selRing.position.set(b.bx, 0.22, b.bz);
+  }
+  if(b && window.selectBlock) window.selectBlock(b);
+}
+
+/* ---------- picking ---------- */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
 function updatePointer(e){
   const r = renderer.domElement.getBoundingClientRect();
   pointer.x = ((e.clientX - r.left)/r.width)*2 - 1;
@@ -308,27 +551,26 @@ function updatePointer(e){
 renderer.domElement.addEventListener('pointermove', (e)=>{
   updatePointer(e);
   raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(pickables, false);
-  renderer.domElement.style.cursor = hits.length ? 'pointer' : 'default';
+  renderer.domElement.style.cursor = raycaster.intersectObjects(pads, false).length ? 'pointer' : 'default';
 });
 let downXY = null;
 renderer.domElement.addEventListener('pointerdown', (e)=>{ downXY = {x:e.clientX, y:e.clientY}; });
 renderer.domElement.addEventListener('pointerup', (e)=>{
-  if (!downXY) return;
+  if(!downXY) return;
   const moved = Math.abs(e.clientX-downXY.x) + Math.abs(e.clientY-downXY.y);
   downXY = null;
-  if (moved > 6) return;              // was an orbit drag, not a click
+  if(moved > 6) return;
   updatePointer(e);
   raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(pickables, false);
-  if (hits.length) setSelected(hits[0].object.userData.block);
+  const hits = raycaster.intersectObjects(pads, false);
+  if(hits.length) setSelected(hits[0].object.userData.block);
 });
 
+/* ---------- resize / animate ---------- */
 function onResize(){
   W = stage.clientWidth; H = stage.clientHeight;
   camera.aspect = W/H; camera.updateProjectionMatrix();
-  renderer.setSize(W, H);
-  labelRenderer.setSize(W, H);
+  renderer.setSize(W, H); labelRenderer.setSize(W, H);
 }
 window.addEventListener('resize', onResize);
 
@@ -336,12 +578,12 @@ const clock = new THREE.Clock();
 function animate(){
   requestAnimationFrame(animate);
   const t = clock.getElapsedTime();
-  for (let i=0;i<beacons.length;i++){
+  for(let i=0;i<beacons.length;i++){
     const bk = beacons[i];
-    bk.beacon.position.y = bk.baseY + Math.sin(t*2 + i)*0.12;
-    const s = 1 + Math.sin(t*3 + i)*0.25;
+    bk.beacon.position.y = bk.baseY + Math.sin(t*2 + i)*0.14;
+    const s = 1 + Math.sin(t*3 + i)*0.3;
     bk.ring.scale.set(s, s, s);
-    bk.ring.material.opacity = 0.55 - (s-1)*0.6;
+    bk.ring.material.opacity = Math.max(0.1, 0.6 - (s-1)*0.7);
   }
   controls.update();
   renderer.render(scene, camera);
