@@ -10,6 +10,12 @@
 
 This is an independent portfolio prototype. It is **not affiliated with any real farm or organisation**, uses only synthetic data, and performs no real-world actions.
 
+## Dashboard (synthetic data)
+
+![AgriSentry Power BI dashboard — alerts by severity, by rule, and across a simulated 24-hour window (synthetic data)](screenshots/dashboard.png)
+
+*Built in Power BI over the rule engine's synthetic output: alerts by severity, by rule, and across a simulated 24-hour window. Every figure is synthetic.*
+
 ## At a glance
 
 | | |
