@@ -2,6 +2,8 @@
 
 [![English](https://img.shields.io/badge/English-9e9e9e?style=flat-square)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-1B5E20?style=flat-square)](README.zh-CN.md)
 
+**🌐 在线作品页 → [zeeekrom.github.io/agrisentry](https://zeeekrom.github.io/agrisentry/)** · [交互式 3D 农场 ↗](https://zeeekrom.github.io/agrisentry/3d.html)
+
 > 一个建在 Microsoft Power Platform 上的**可配置农场监测系统**。它把（模拟的）天气与传感器数据，转化成**按作物划分、需人工批准的风险告警**，任何动作执行前都要人确认；配有不可篡改的审计记录和 Power BI 看板。
 
 ![平台](https://img.shields.io/badge/%E5%B9%B3%E5%8F%B0-Microsoft%20Power%20Platform-742774)

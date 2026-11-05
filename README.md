@@ -2,6 +2,8 @@
 
 [![English](https://img.shields.io/badge/English-1B5E20?style=flat-square)](README.md) [![中文](https://img.shields.io/badge/%E4%B8%AD%E6%96%87-9e9e9e?style=flat-square)](README.zh-CN.md)
 
+**🌐 Live site → [zeeekrom.github.io/agrisentry](https://zeeekrom.github.io/agrisentry/)** · [interactive 3D farm view ↗](https://zeeekrom.github.io/agrisentry/3d.html)
+
 > A configurable farm-monitoring system on the Microsoft Power Platform. It turns (simulated) weather and sensor data into **per-crop risk alerts that a person approves** before any action, with an immutable audit trail and a Power BI dashboard.
 
 ![Platform](https://img.shields.io/badge/platform-Microsoft%20Power%20Platform-742774)
