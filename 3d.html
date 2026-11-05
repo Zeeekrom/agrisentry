@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgriSentry — 3D block view</title>
+<meta name="description" content="An interactive 3D view of farm blocks coloured by risk status — part of the AgriSentry portfolio prototype. Synthetic data; runs entirely in the browser.">
+<style>
+  :root{
+    --green-deep:#153C29; --green:#1B5E20; --green-soft:#2E7D4F;
+    --amber:#B45309; --amber-lt:#E0A24B; --red:#C0392B;
+    --ink:#1D2A22; --muted:#6B7A6F; --bg:#F5F2E9; --card:#FFFFFF; --line:#E3DDCC;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden;}
+  .serif{font-family:Georgia,"Times New Roman",serif;}
+  a{color:var(--amber-lt);text-decoration:none;}
+
+  header{background:var(--green-deep);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:none;}
+  header .brand{font-size:20px;font-weight:700;}
+  header .sub{font-size:13px;color:#9FC3AB;margin-left:8px;}
+  header .spacer{flex:1;}
+  header .back{font-size:14px;border:1px solid rgba(255,255,255,.4);border-radius:7px;padding:6px 14px;color:#fff;}
+  header .back:hover{background:rgba(255,255,255,.1);}
+  .langbar{display:inline-flex;border:1px solid rgba(255,255,255,.35);border-radius:100px;overflow:hidden;}
+  .lang-btn{background:transparent;color:#cfe0d4;border:0;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .lang-btn[aria-pressed="true"]{background:var(--amber-lt);color:#153C29;}
+
+  main{flex:1;position:relative;min-height:0;}
+  #stage{position:absolute;inset:0;}
+  #stage canvas{display:block;}
+
+  .blk-label{background:rgba(255,255,255,.92);color:#1D2A22;border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;font-family:"Segoe UI",system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.12);}
+
+  .panel{position:absolute;top:16px;right:16px;width:272px;max-width:calc(100% - 32px);background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(21,60,41,.16);padding:18px;}
+  .panel .code{font-size:24px;font-weight:700;color:var(--green-deep);letter-spacing:.5px;}
+  .panel .row{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-top:10px;color:var(--muted);}
+  .panel .row b{color:var(--ink);text-align:right;}
+  .badge{display:inline-block;padding:2px 10px;border-radius:100px;font-size:13px;font-weight:700;color:#fff;}
+  .s-ok{background:var(--green-soft);} .s-watch{background:var(--amber-lt);color:#153C29;} .s-alert{background:var(--red);}
+  .panel .hint{font-size:12px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:10px;line-height:1.4;}
+
+  .legend{position:absolute;left:16px;bottom:16px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;}
+  .legend .t{font-weight:700;color:var(--green-deep);margin-bottom:8px;}
+  .legend .item{display:flex;align-items:center;gap:8px;margin-top:5px;color:#43514a;}
+  .dot{width:13px;height:13px;border-radius:3px;flex:none;}
+  .d-ok{background:var(--green-soft);} .d-watch{background:var(--amber-lt);} .d-alert{background:var(--red);}
+  .hintbar{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(21,60,41,.82);color:#EAF2EC;font-size:13px;padding:8px 16px;border-radius:100px;white-space:nowrap;}
+  .note{position:absolute;right:16px;bottom:16px;font-size:11px;color:var(--muted);}
+
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted);font-size:15px;background:var(--bg);padding:20px;text-align:center;}
+  .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #err{display:none;max-width:440px;line-height:1.5;}
+
+  @media (max-width:640px){
+    .legend{bottom:66px;} .hintbar{bottom:18px;} .note{display:none;}
+    .panel{width:auto;top:auto;left:16px;right:16px;bottom:116px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <span class="brand serif">AgriSentry</span>
+    <span class="sub" data-en="3D block view · synthetic" data-zh="3D 地块视图 · 合成">3D block view · synthetic</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="langbar" role="group" aria-label="Language">
+    <button class="lang-btn" data-lang="en" onclick="setLang('en')" aria-pressed="true">English</button>
+    <button class="lang-btn" data-lang="zh" onclick="setLang('zh')" aria-pressed="false">中文</button>
+  </div>
+  <a class="back" href="index.html" data-en="← Back" data-zh="← 返回">← Back</a>
+</header>
+
+<main>
+  <div id="stage"></div>
+
+  <div class="panel" id="panel" style="display:none">
+    <div class="code" id="p-code">—</div>
+    <div class="row"><span data-en="Crop" data-zh="作物">Crop</span><b id="p-crop">—</b></div>
+    <div class="row"><span data-en="Lead rule" data-zh="主规则">Lead rule</span><b id="p-rule">—</b></div>
+    <div class="row"><span data-en="Status" data-zh="状态">Status</span><b id="p-status">—</b></div>
+    <div class="row"><span data-en="Open alerts" data-zh="未处理告警">Open alerts</span><b id="p-alerts">—</b></div>
+    <div class="hint" data-en="Synthetic data. Status = most severe open alert on the block." data-zh="合成数据。状态 = 该地块最严重的未处理告警。">Synthetic data. Status = most severe open alert on the block.</div>
+  </div>
+
+  <div class="legend">
+    <div class="t" data-en="Risk status" data-zh="风险状态">Risk status</div>
+    <div class="item"><span class="dot d-ok"></span><span data-en="OK — no open alerts" data-zh="正常 — 无未处理告警">OK — no open alerts</span></div>
+    <div class="item"><span class="dot d-watch"></span><span data-en="Watch — warning" data-zh="注意 — 预警">Watch — warning</span></div>
+    <div class="item"><span class="dot d-alert"></span><span data-en="Alert — needs a person" data-zh="告警 — 需人处理">Alert — needs a person</span></div>
+  </div>
+
+  <div class="hintbar" data-en="Drag to orbit · scroll to zoom · click a block" data-zh="拖动旋转 · 滚轮缩放 · 点击地块">Drag to orbit · scroll to zoom · click a block</div>
+  <div class="note" data-en="three.js · runs in your browser · no cloud" data-zh="three.js · 浏览器内运行 · 不用云">three.js · runs in your browser · no cloud</div>
+
+  <div id="loading">
+    <div class="spin" id="spin"></div>
+    <div id="loadtext" data-en="Loading 3D view…" data-zh="正在加载 3D 视图…">Loading 3D view…</div>
+    <div id="err"></div>
+  </div>
+</main>
+
+<!-- Language + info panel. Classic script so the page still translates if three.js is blocked. -->
+<script>
+  var LANG_KEY='agrisentry-lang';
+  var curLang='en';
+  var selectedBlock=null;
+  var STATUS_WORD={ ok:{en:'OK',zh:'正常'}, watch:{en:'Watch',zh:'注意'}, alert:{en:'Alert',zh:'告警'} };
+
+  function applyStatic(l){
+    var nodes=document.querySelectorAll('[data-en]');
+    for(var i=0;i<nodes.length;i++){
+      var v=(l==='zh')?nodes[i].getAttribute('data-zh'):nodes[i].getAttribute('data-en');
+      if(v!==null) nodes[i].textContent=v;
+    }
+  }
+  function renderPanel(){
+    if(!selectedBlock) return;
+    var b=selectedBlock, l=curLang;
+    document.getElementById('p-code').textContent=b.code;
+    document.getElementById('p-crop').textContent=b.crop[l];
+    document.getElementById('p-rule').textContent=(b.status==='ok')?(l==='zh'?'—（无）':'— (none)'):b.rule[l];
+    var st=document.getElementById('p-status');
+    st.textContent=STATUS_WORD[b.status][l];
+    st.className='badge s-'+b.status;
+    document.getElementById('p-alerts').textContent=b.alerts;
+  }
+  // called by the 3D module when a block is picked
+  window.selectBlock=function(b){
+    selectedBlock=b;
+    document.getElementById('panel').style.display='block';
+    renderPanel();
+  };
+  function setLang(l){
+    if(l!=='zh') l='en';
+    curLang=l;
+    document.documentElement.lang=(l==='zh')?'zh-CN':'en';
+    applyStatic(l);
+    var btns=document.querySelectorAll('.lang-btn');
+    for(var j=0;j<btns.length;j++) btns[j].setAttribute('aria-pressed', btns[j].getAttribute('data-lang')===l?'true':'false');
+    renderPanel();
+    try{ localStorage.setItem(LANG_KEY,l); }catch(e){}
+  }
+  (function(){
+    var init='en';
+    try{
+      var s=localStorage.getItem(LANG_KEY);
+      if(s) init=s;
+      else if(navigator.language && navigator.language.toLowerCase().indexOf('zh')===0) init='zh';
+    }catch(e){}
+    setLang(init);
+  })();
+
+  function show3DError(){
+    var spin=document.getElementById('spin'); if(spin) spin.style.display='none';
+    var lt=document.getElementById('loadtext'); if(lt) lt.style.display='none';
+    var e=document.getElementById('err');
+    e.style.display='block';
+    e.textContent=(curLang==='zh')
+      ? '3D 组件加载失败（可能是网络拦截了 three.js）。项目其余部分不依赖它。'
+      : 'The 3D component failed to load (three.js may be blocked by the network). The rest of the project does not depend on it.';
+  }
+  window.__booted=false;
+  setTimeout(function(){ if(!window.__booted) show3DError(); }, 12000);
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+window.__booted = true;
+
+const COLORS = { ok:0x2E7D4F, watch:0xE0A24B, alert:0xC0392B };
+const SP = 3.3;
+const BLOCKS = [
+  {code:'VIN-01', crop:{en:'Vineyard',zh:'葡萄园'},     rule:{en:'Frost risk',zh:'霜冻风险'},            status:'alert', alerts:9, gx:-1, gz:-1},
+  {code:'POT-02', crop:{en:'Potato',zh:'马铃薯'},       rule:{en:'Late blight',zh:'晚疫病'},             status:'watch', alerts:4, gx:0,  gz:-1},
+  {code:'CHE-03', crop:{en:'Cherry',zh:'樱桃'},         rule:{en:'Rain-cracking',zh:'裂果'},             status:'ok',    alerts:0, gx:1,  gz:-1},
+  {code:'APP-04', crop:{en:'Apple',zh:'苹果'},          rule:{en:'Apple scab',zh:'苹果黑星病'},          status:'watch', alerts:3, gx:-1, gz:1},
+  {code:'BER-05', crop:{en:'Berry',zh:'浆果'},          rule:{en:'Botrytis (grey mould)',zh:'灰霉病'},   status:'alert', alerts:7, gx:0,  gz:1},
+  {code:'VEG-06', crop:{en:'Leafy greens',zh:'叶菜'},   rule:{en:'Irrigation need',zh:'灌溉需求'},       status:'ok',    alerts:0, gx:1,  gz:1},
+];
+
+const stage = document.getElementById('stage');
+let W = stage.clientWidth, H = stage.clientHeight;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xF5F2E9);
+
+const camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 200);
+camera.position.set(7, 7.5, 9.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(W, H);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.left = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+stage.appendChild(labelRenderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 6;
+controls.maxDistance = 26;
+controls.maxPolarAngle = Math.PI/2 - 0.04;
+controls.target.set(0, 0.3, 0);
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0xcfc6ad, 0.75));
+const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+sun.position.set(6, 12, 5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 40;
+sun.shadow.camera.left = -12; sun.shadow.camera.right = 12;
+sun.shadow.camera.top = 12; sun.shadow.camera.bottom = -12;
+scene.add(sun);
+
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(17, 14),
+  new THREE.MeshStandardMaterial({ color:0xDAD3BE, roughness:1 })
+);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+const grid = new THREE.GridHelper(17, 17, 0xBDB79E, 0xCFC9B4);
+grid.position.y = 0.012;
+scene.add(grid);
+
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const pickables = [];
+const beacons = [];
+
+BLOCKS.forEach(b => {
+  const h = b.status==='alert' ? 0.9 : b.status==='watch' ? 0.65 : 0.5;
+  const mat = new THREE.MeshStandardMaterial({ color:COLORS[b.status], roughness:0.72, metalness:0.04 });
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(2.4, h, 2.4), mat);
+  mesh.position.set(b.gx*SP, h/2, b.gz*SP);
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.userData.block = b;
+  scene.add(mesh);
+  pickables.push(mesh);
+  b._mesh = mesh;
+
+  const div = document.createElement('div');
+  div.className = 'blk-label';
+  div.textContent = b.code;
+  const label = new CSS2DObject(div);
+  label.position.set(0, h + 0.55, 0);
+  mesh.add(label);
+
+  if (b.status === 'alert') {
+    const beacon = new THREE.Mesh(
+      new THREE.SphereGeometry(0.22, 20, 20),
+      new THREE.MeshStandardMaterial({ color:0xC0392B, emissive:0xC0392B, emissiveIntensity:0.9, roughness:0.4 })
+    );
+    beacon.position.set(b.gx*SP, h + 1.25, b.gz*SP);
+    scene.add(beacon);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.34, 0.46, 32),
+      new THREE.MeshBasicMaterial({ color:0xC0392B, transparent:true, opacity:0.6, side:THREE.DoubleSide })
+    );
+    ring.rotation.x = -Math.PI/2;
+    ring.position.set(b.gx*SP, h + 0.05, b.gz*SP);
+    scene.add(ring);
+    beacons.push({ beacon, ring, baseY:h + 1.25 });
+  }
+});
+
+function setSelected(b){
+  for (const m of pickables){ m.material.emissive.setHex(0x000000); m.material.emissiveIntensity = 1; }
+  if (b && b._mesh){ b._mesh.material.emissive.setHex(0x3A3320); b._mesh.material.emissiveIntensity = 0.55; }
+  if (b && window.selectBlock) window.selectBlock(b);
+}
+
+function updatePointer(e){
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - r.left)/r.width)*2 - 1;
+  pointer.y = -((e.clientY - r.top)/r.height)*2 + 1;
+}
+renderer.domElement.addEventListener('pointermove', (e)=>{
+  updatePointer(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(pickables, false);
+  renderer.domElement.style.cursor = hits.length ? 'pointer' : 'default';
+});
+let downXY = null;
+renderer.domElement.addEventListener('pointerdown', (e)=>{ downXY = {x:e.clientX, y:e.clientY}; });
+renderer.domElement.addEventListener('pointerup', (e)=>{
+  if (!downXY) return;
+  const moved = Math.abs(e.clientX-downXY.x) + Math.abs(e.clientY-downXY.y);
+  downXY = null;
+  if (moved > 6) return;              // was an orbit drag, not a click
+  updatePointer(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(pickables, false);
+  if (hits.length) setSelected(hits[0].object.userData.block);
+});
+
+function onResize(){
+  W = stage.clientWidth; H = stage.clientHeight;
+  camera.aspect = W/H; camera.updateProjectionMatrix();
+  renderer.setSize(W, H);
+  labelRenderer.setSize(W, H);
+}
+window.addEventListener('resize', onResize);
+
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  for (let i=0;i<beacons.length;i++){
+    const bk = beacons[i];
+    bk.beacon.position.y = bk.baseY + Math.sin(t*2 + i)*0.12;
+    const s = 1 + Math.sin(t*3 + i)*0.25;
+    bk.ring.scale.set(s, s, s);
+    bk.ring.material.opacity = 0.55 - (s-1)*0.6;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+animate();
+
+document.getElementById('loading').style.display = 'none';
+setSelected(BLOCKS.find(b=>b.status==='alert') || BLOCKS[0]);
+</script>
+</body>
+</html>
