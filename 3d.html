@@ -262,6 +262,20 @@ scene.add(sun);
 function M(color, extra){ return new THREE.MeshStandardMaterial(Object.assign({color:color, roughness:0.92, metalness:0.0, flatShading:true}, extra||{})); }
 function mesh(geo, material, cast, rec){ const m=new THREE.Mesh(geo, material); if(cast) m.castShadow=true; if(rec) m.receiveShadow=true; return m; }
 
+// a hollow rectangular border as ONE extruded mesh (no overlapping boxes -> no z-fighting)
+function frameMesh(outerW, outerD, thick, h, material){
+  const hw=outerW/2, hd=outerD/2, iw=hw-thick, id=hd-thick;
+  const s=new THREE.Shape();
+  s.moveTo(-hw,-hd); s.lineTo(hw,-hd); s.lineTo(hw,hd); s.lineTo(-hw,hd); s.closePath();
+  const hole=new THREE.Path();
+  hole.moveTo(-iw,-id); hole.lineTo(-iw,id); hole.lineTo(iw,id); hole.lineTo(iw,-id); hole.closePath();
+  s.holes.push(hole);
+  const g=new THREE.ExtrudeGeometry(s,{depth:h, bevelEnabled:false});
+  g.rotateX(-Math.PI/2); g.computeBoundingBox(); g.translate(0, -g.boundingBox.min.y, 0);
+  const m=new THREE.Mesh(g, material); m.castShadow=true; m.receiveShadow=true;
+  return m;
+}
+
 function lowTree(s, canopyCol){
   const g = new THREE.Group();
   const trunk = mesh(new THREE.CylinderGeometry(0.12*s, 0.17*s, 0.8*s, 6), M(COL.trunk), true, false);
@@ -320,22 +334,16 @@ function buildBlock(b){
   g.position.set(b.bx, 0, b.bz);
   b._group = g;
 
-  // soil / plot pad (the clickable target)
+  // soil / plot pad (the clickable target), full footprint, top at y=0.3
   const tilled = (b.type==='potato' || b.type==='leafy' || b.type==='berry');
-  const pad = mesh(new THREE.BoxGeometry(BW, 0.2, BD), M(tilled ? COL.soilTilled : COL.pasture), true, true);
-  pad.position.y = 0.2; pad.userData.block = b; g.add(pad); pads.push(pad);
+  const pad = mesh(new THREE.BoxGeometry(BW, 0.3, BD), M(tilled ? COL.soilTilled : COL.pasture), true, true);
+  pad.position.y = 0.15; pad.userData.block = b; g.add(pad); pads.push(pad);
 
-  // status edging frame
+  // status border as a single extruded frame: outer sits just beyond the pad,
+  // bottom buried below the soil surface -> no coplanar faces, no z-fighting
   const em = M(STATUS_HEX[b.status], {roughness:0.6});
-  const t = 0.35, hy = 0.42;
-  const edges = [
-    [BW, hy, t, 0, (BD/2 - t/2)], [BW, hy, t, 0, -(BD/2 - t/2)],
-    [t, hy, BD, (BW/2 - t/2), 0], [t, hy, BD, -(BW/2 - t/2), 0]
-  ];
-  for(const [w,h,d,x,z] of edges){
-    const e = mesh(new THREE.BoxGeometry(w,h,d), em, true, false);
-    e.position.set(x, 0.3, z); g.add(e);
-  }
+  const frame = frameMesh(BW + 0.12, BD + 0.12, 0.5, 0.52, em);
+  frame.userData.block = b; g.add(frame); pads.push(frame);
 
   // crop decor
   if(b.type==='vineyard') buildVineyard(g);
@@ -345,27 +353,25 @@ function buildBlock(b){
   else if(b.type==='berry') buildTunnels(g);
   else if(b.type==='leafy') buildLeafy(g);
 
-  // marker post + flag
-  const post = mesh(new THREE.CylinderGeometry(0.07,0.07,1.6,6), M(0x8d8d8d), true, false);
-  post.position.set(-BW/2 + 0.4, 0.9, -BD/2 + 0.4); g.add(post);
-  const flag = mesh(new THREE.BoxGeometry(0.7,0.45,0.08), M(STATUS_HEX[b.status], {roughness:0.5}), true, false);
-  flag.position.set(-BW/2 + 0.78, 1.45, -BD/2 + 0.4); g.add(flag);
+  // corner signpost — anchors the label (and alert light) so nothing floats detached
+  const cx = -BW/2 + 0.5, cz = -BD/2 + 0.5, postH = 2.6;
+  const post = mesh(new THREE.CylinderGeometry(0.07,0.07,postH,6), M(0x8d8d8d), true, false);
+  post.position.set(cx, postH/2, cz); g.add(post);
+  const flag = mesh(new THREE.BoxGeometry(0.78,0.5,0.08), M(STATUS_HEX[b.status], {roughness:0.5}), true, false);
+  flag.position.set(cx + 0.46, 1.7, cz); g.add(flag);
 
-  // label
+  // label sits at the top of the post (visually tethered by the post)
   const div = document.createElement('div');
   div.className = 'blk-label'; div.textContent = b.code;
   const label = new CSS2DObject(div);
-  label.position.set(0, 2.4, 0); g.add(label);
+  label.position.set(cx, postH + 0.5, cz); g.add(label);
 
-  // alert beacon
+  // alert light caps the post (pulses) — no longer a ball floating in mid-air
   if(b.status==='alert'){
-    const beacon = mesh(new THREE.SphereGeometry(0.26, 18, 18),
-      new THREE.MeshStandardMaterial({color:0xC0392B, emissive:0xC0392B, emissiveIntensity:0.9, roughness:0.4, flatShading:true}), false, false);
-    beacon.position.set(0, 3.1, 0); g.add(beacon);
-    const ring = mesh(new THREE.RingGeometry(0.4, 0.55, 28),
-      new THREE.MeshBasicMaterial({color:0xC0392B, transparent:true, opacity:0.6, side:THREE.DoubleSide}), false, false);
-    ring.rotation.x = -Math.PI/2; ring.position.set(0, 0.46, 0); g.add(ring);
-    beacons.push({beacon, ring, baseY:3.1});
+    const beacon = mesh(new THREE.SphereGeometry(0.2, 18, 18),
+      new THREE.MeshStandardMaterial({color:0xC0392B, emissive:0xC0392B, emissiveIntensity:0.95, roughness:0.4, flatShading:true}), false, false);
+    beacon.position.set(cx, postH + 0.08, cz); g.add(beacon);
+    beacons.push({beacon, baseY:postH + 0.08});
   }
 
   scene.add(g);
@@ -580,10 +586,8 @@ function animate(){
   const t = clock.getElapsedTime();
   for(let i=0;i<beacons.length;i++){
     const bk = beacons[i];
-    bk.beacon.position.y = bk.baseY + Math.sin(t*2 + i)*0.14;
-    const s = 1 + Math.sin(t*3 + i)*0.3;
-    bk.ring.scale.set(s, s, s);
-    bk.ring.material.opacity = Math.max(0.1, 0.6 - (s-1)*0.7);
+    bk.beacon.position.y = bk.baseY + Math.sin(t*2.4 + i)*0.08;
+    bk.beacon.material.emissiveIntensity = 0.65 + Math.sin(t*4 + i)*0.3;
   }
   controls.update();
   renderer.render(scene, camera);
