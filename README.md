@@ -10,6 +10,10 @@
 
 This is an independent portfolio prototype. It is **not affiliated with any real farm or organisation**, uses only synthetic data, and performs no real-world actions.
 
+## Overview
+
+![AgriSentry — one-page overview: the problem, how a risk becomes a decision, the Power BI dashboard, and the rules it is built on (synthetic data)](media/poster.jpg)
+
 ## Dashboard (synthetic data)
 
 ![AgriSentry Power BI dashboard — alerts by severity, by rule, and across a simulated 24-hour window (synthetic data)](screenshots/dashboard.png)
