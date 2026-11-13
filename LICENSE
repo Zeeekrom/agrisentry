@@ -1,0 +1,19 @@
+Copyright (c) 2026 AgriSentry (Yuxiang "Evan" Huang).
+All rights reserved.
+
+This repository is a curated, privacy-safe showcase. Its text, images, page
+design and the project's own code are protected by copyright and are NOT
+licensed for reuse. No permission is granted to copy, reproduce, adapt,
+reverse engineer, scrape, or rebuild this work -- by hand, with automated
+tools, or with AI website/code-cloning tools -- including for training AI
+systems, except uses that copyright law itself permits (for example, brief
+quotation for review, commentary or news reporting). You are welcome to link
+to the project.
+
+The application source, tests and configuration are kept in a separate
+private repository and are available for review on request.
+
+Third-party open-source components retain their own licenses and are not
+restricted by this notice -- see THIRD-PARTY-NOTICES.md.
+
+Full terms: https://zeeekrom.github.io/agrisentry/terms.html
