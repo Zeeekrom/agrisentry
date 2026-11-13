@@ -10,6 +10,11 @@
 ![演示数据](https://img.shields.io/badge/%E6%BC%94%E7%A4%BA%E6%95%B0%E6%8D%AE-%E5%90%88%E6%88%90-0f766e)
 ![状态](https://img.shields.io/badge/%E7%8A%B6%E6%80%81-%E5%BC%80%E5%8F%91%E4%B8%AD-b45309)
 
+<a href="https://zeeekrom.github.io/agrisentry/film/"><img src="film/preview.jpg" alt="播放 AgriSentry 概念短片（带旁白）" width="640"></a>
+
+**概念短片：**[观看 2 分 37 秒旁白短片](https://zeeekrom.github.io/agrisentry/film/)
+——小农场现在缺什么；一个会盯、会讲、会认病害、会回答问题的农场 AI；以及每个决定仍由人来做。英文旁白（合成语音）配字幕；数据均为合成。
+
 **这是一个精选、脱敏的作品展示。** 应用源码、配置、解决方案文件与数据管道都放在私有仓库。这个公开版只包含说明文字、高层架构图，以及（随开发推进的）合成数据截图——**不含源码、不含真实数据**。源码可应要求提供审阅。
 
 这是一个独立的作品原型。它**与任何真实农场或机构无关**，仅使用合成数据，不执行任何真实世界的动作。

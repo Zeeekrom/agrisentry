@@ -10,6 +10,12 @@
 ![Demo data](https://img.shields.io/badge/demo%20data-synthetic-0f766e)
 ![Status](https://img.shields.io/badge/status-in%20development-b45309)
 
+<a href="https://zeeekrom.github.io/agrisentry/film/"><img src="film/preview.jpg" alt="Play the narrated AgriSentry concept film" width="640"></a>
+
+**Concept film:** [watch the 2:37 narrated film](https://zeeekrom.github.io/agrisentry/film/)
+— what a small farm is missing today, a farm AI that watches, explains, spots disease and answers questions,
+and the person who still makes every call. English narration (synthetic voice) with captions; synthetic data.
+
 **This is a curated, privacy-safe showcase.** The application source, configuration, solution files and data pipelines live in a private repository. This public edition holds the write-up, high-level diagrams and (as the build progresses) synthetic screenshots only — **no source code and no real data**. Source is available for review on request.
 
 This is an independent portfolio prototype. It is **not affiliated with any real farm or organisation**, uses only synthetic data, and performs no real-world actions.
