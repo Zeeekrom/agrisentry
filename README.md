@@ -98,7 +98,7 @@ airTempC is 1 (≤ 2); leafWetness is 0.8 (≥ 0.6); windKmh is 2 (≤ 5).
 → Consider frost protection for this block. A person must approve before any action is taken.
 ```
 
-The narrator is a deterministic template by default — offline and always available; a live LLM can be swapped in, wrapped by the same guardrail and a template fallback, so a model can never smuggle in a figure. Synthetic data.
+The narrator is a deterministic template by default — offline and always available — and the same pipeline has been run on a live LLM: on a real model the engine still owns every number, and the guardrail rejects any narrative that adds one, falling back to the template. Synthetic data.
 
 ## Technology
 
