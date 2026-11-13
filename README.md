@@ -88,6 +88,18 @@ Each crop maps to one representative flow (e.g. vineyard → frost as the lead e
 - **Data residency & least exposure** — data kept in-region; model payloads minimised.
 - **Tested rule engine, separated from I/O** — the decision logic is unit-tested against gold-standard cases.
 
+## Numbers from code, words from the model
+
+Every alert the engine raises is turned into a plain-language explanation and a recommended action — but the AI supplies only the *words*. The figures come from the deterministic rule engine, and a guardrail rejects any narrative containing a number that is not in the source facts, or any wording that implies the system acts on its own. All 278 synthetic alerts pass it.
+
+```
+Block VIN-01 (Wine grape): the 'Frost risk' rule fired because
+airTempC is 1 (≤ 2); leafWetness is 0.8 (≥ 0.6); windKmh is 2 (≤ 5).
+→ Consider frost protection for this block. A person must approve before any action is taken.
+```
+
+The narrator is a deterministic template by default — offline and always available; a live LLM can be swapped in, wrapped by the same guardrail and a template fallback, so a model can never smuggle in a figure. Synthetic data.
+
 ## Technology
 
 Microsoft Power Platform (Power Apps · Dataverse · Power Automate · Power BI) · Azure Functions (.NET/C#) · optional 3D block view via a PCF (React/three.js) control · Git.
