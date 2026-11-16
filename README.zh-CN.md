@@ -193,4 +193,4 @@ airTempC is 1 (≤ 2); leafWetness is 0.8 (≥ 0.6); windKmh is 2 (≤ 5).
 
 正在积极开发中。源码、测试与配置保存在私有仓库,**可应要求提供审阅**(例如在面试中做一次讲解)。
 
-保留所有权利。见[条款与版权](https://zeeekrom.github.io/agrisentry/terms.html)页和仓库 `LICENSE`。
+© 2026 AgriSentry，保留所有权利，见 [LICENSE](LICENSE)。未经书面许可，不得复制、转载或改编本仓库的任何内容，也不得用手工、自动化工具或 AI 克隆工具重建项目的代码和设计；除法律允许的情形外，不得对代码进行逆向工程；不得抓取、批量下载这些内容，或把它们用于训练、评测 AI 模型。法律本身允许的使用（如为评论、新闻报道合理引用）不受影响。欢迎分享链接。第三方开源组件保留各自的许可，见 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md)。完整条款见[条款与版权](https://zeeekrom.github.io/agrisentry/terms.html)页。

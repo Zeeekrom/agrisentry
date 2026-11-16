@@ -193,4 +193,4 @@ For a real farm to use something like this, it would also need authenticated ide
 
 In active development. The source, tests and configuration are kept in a private repository and are **available for review on request** (for example, a walkthrough in an interview).
 
-All rights reserved. See the [terms &amp; copyright](https://zeeekrom.github.io/agrisentry/terms.html) page and the repository `LICENSE`.
+© 2026 AgriSentry. All rights reserved; see [LICENSE](LICENSE). Without written permission, nothing in this repository may be copied, republished or adapted, and the project's code and design may not be rebuilt, whether by hand, with automated tools or with AI cloning tools. The code may not be reverse engineered except where the law allows, and the content may not be scraped, bulk-downloaded or used to train or evaluate AI models. Uses the law already allows, such as fair dealing for review or news reporting, are not affected. Sharing links is welcome. Third-party open-source components keep their own licences; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Full terms: [terms &amp; copyright](https://zeeekrom.github.io/agrisentry/terms.html).
