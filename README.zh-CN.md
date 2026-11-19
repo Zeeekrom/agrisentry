@@ -113,10 +113,31 @@ AgriSentry 的 AI 是一个**受约束的农场智能体**:聪明到能帮上忙
 
 **数字来自代码,文字来自模型。** 解释里的数字只来自确定性引擎,模型只负责措辞。一道护栏让这条变成可执行的约束——它会挡下任何含"源数据之外数字"的叙述、或任何暗示自主动作的措辞,并回退到确定性模板。278 条合成告警全部通过。
 
+*确定性模板——离线、永远可用的兜底:*
+
 ```
 Block VIN-01 (Wine grape): the 'Frost risk' rule fired because
 airTempC is 1 (≤ 2); leafWetness is 0.8 (≥ 0.6); windKmh is 2 (≤ 5).
 → Consider frost protection for this block. A person must approve before any action is taken.
+```
+
+*同一条告警，由真实大模型叙述——走 Code 订阅额度，一次真跑存档（模型措辞每次不同；图中每个数字都是合成的）：*
+
+```
+$ dotnet run --project src/AgriSentry.Narrate
+
+▇ VIN-01 (grape) · frost · Alert
+  facts : airTempC=1 (≤2); leafWetness=0.8 (≥0.6); windKmh=2 (≤5)
+  model : Block VIN-01 (wine grape) has triggered a Frost risk alert. All
+          three conditions in the rule are met: air temperature is 1°C, at
+          or below the 2°C threshold; leaf wetness is 0.8, at or above the
+          0.6 threshold; and wind speed is 2 km/h, at or below the 5 km/h
+          threshold. Low temperature, wet leaves and calm air together
+          match the conditions this rule watches for frost.
+  guard : PASS — kept the model's words.
+
+3 alerts: 3 kept the model's words, 0 fell back to the template.
+Numbers came from the engine throughout; the guardrail enforced it on a live model.
 ```
 
 叙述默认由确定性模板生成——离线、永远可用——而**同一条管道也已在真实大模型上跑过**:在真模型上,数字依旧全部来自引擎,护栏照常生效,被挡下的就回退到模板。护城河不是"接了个 AI",而是外面那层 grounding、护栏、人工批准与审计。

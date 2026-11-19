@@ -96,6 +96,19 @@
     .ai-arrow{transform:rotate(90deg);font-size:24px;}
   }
 
+  /* live model run terminal */
+  .liverun{margin-top:16px;border:1px solid #16351f;border-radius:12px;overflow:hidden;box-shadow:0 2px 12px rgba(10,34,22,.14);}
+  .liverun-bar{display:flex;align-items:center;gap:8px;padding:9px 14px;background:#0a1c13;border-bottom:1px solid #16351f;}
+  .liverun-bar .dot{width:11px;height:11px;border-radius:50%;}
+  .liverun-bar .dot.r{background:#ff5f56;}.liverun-bar .dot.y{background:#ffbd2e;}.liverun-bar .dot.g{background:#27c93f;}
+  .liverun-title{margin-left:6px;font:12px "Cascadia Code",Consolas,monospace;color:#8fae9b;letter-spacing:.3px;}
+  .liverun-body{margin:0;padding:18px;background:#0d2318;font:13.5px/1.62 "Cascadia Code",Consolas,monospace;color:#d6e4da;white-space:pre-wrap;overflow-x:auto;}
+  .liverun-body .b{color:#eaf3ed;font-weight:700;}
+  .liverun-body .f{color:#8fd0a6;}
+  .liverun-body .m{color:#cfe0d4;}
+  .liverun-body .g{color:#7ee2a0;font-weight:700;}
+  .liverun-body .mut{color:#6f8a79;}
+
   /* footer */
   footer{background:var(--green-deep);color:#fff;padding:40px 0;margin-top:10px;}
   footer .name{font-size:24px;font-weight:700;}
@@ -193,6 +206,32 @@
     <p class="poster-cap"
        data-en="Shown from the deterministic template — and the same narration has also been run on a live LLM, wrapped by the same number guardrail (it rejects any figure not in the facts) and a template fallback. Synthetic data."
        data-zh="此处为确定性模板的输出——同样的叙述也已在真实大模型上跑过，外面包着同一道数字护栏（挡下任何不在事实里的数字）与模板兜底。合成数据。">Shown from the deterministic template — and the same narration has also been run on a live LLM, wrapped by the same number guardrail (it rejects any figure not in the facts) and a template fallback. Synthetic data.</p>
+
+    <div class="kicker" style="margin-top:34px" data-en="Proof on a live model" data-zh="真模型上的证据">Proof on a live model</div>
+    <p class="lead"
+       data-en="Run on a live Anthropic model through the Code subscription quota. The engine still owns every number; the guardrail still enforces it on the live output. One captured run — model wording varies, every figure synthetic."
+       data-zh="通过 Code 订阅额度在真实 Anthropic 模型上跑。数字依旧全部来自引擎，护栏依旧在真模型的输出上生效。下面是一次真跑存档——模型措辞每次不同，图中每个数字都是合成的。">Run on a live Anthropic model through the Code subscription quota. The engine still owns every number; the guardrail still enforces it on the live output. One captured run — model wording varies, every figure synthetic.</p>
+
+    <div class="liverun">
+      <div class="liverun-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="liverun-title">AgriSentry.Narrate · live model run · captured sample</span>
+      </div>
+      <pre class="liverun-body"><span class="mut">backend: claude CLI · Claude Code subscription quota · synthetic data</span>
+
+<span class="b">▇ VIN-01 (grape) · frost · Alert</span>
+  <span class="f">facts : airTempC=1 (≤2); leafWetness=0.8 (≥0.6); windKmh=2 (≤5)</span>
+  <span class="m">model : Block VIN-01 (wine grape) has triggered a Frost risk alert. All three conditions in the rule are met: air temperature is 1°C, at or below the 2°C threshold; leaf wetness is 0.8, at or above the 0.6 threshold; and wind speed is 2 km/h, at or below the 5 km/h threshold. Low temperature, wet leaves and calm air together match the conditions this rule watches for frost.</span>
+  <span class="g">guard : PASS — kept the model's words.</span>
+
+<span class="b">▇ POT-01 (potato) · lateBlight · Warning</span>
+  <span class="f">facts : leafWetness=0.85 (≥0.7); airTempC=18 (≥10); airTempC=18 (≤24)</span>
+  <span class="m">model : Block POT-01 (Potato) has triggered a Warning for potato late blight risk. Leaf wetness is 0.85, which is at or above the 0.7 threshold. Air temperature is 18°C, which is inside the rule's 10–24°C range. Together, these conditions favour blight.</span>
+  <span class="g">guard : PASS — kept the model's words.</span>
+
+<span class="mut">3 alerts · 3 kept the model's words · 0 fell back to the template
+numbers came from the engine throughout; the guardrail enforced it on a live model</span></pre>
+    </div>
   </div>
 </section>
 

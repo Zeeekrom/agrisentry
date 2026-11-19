@@ -113,10 +113,31 @@ AgriSentry's AI is a **constrained farm agent**: capable enough to help, held ti
 
 **Numbers from code, words from the model.** The figures in an explanation come only from the deterministic engine; the model supplies the words. A guardrail makes that enforceable — it rejects any narrative containing a number not in the source facts, or any wording that implies autonomous action, and falls back to a deterministic template. All 278 synthetic alerts pass it.
 
+*The deterministic template — the offline, always-available fallback:*
+
 ```
 Block VIN-01 (Wine grape): the 'Frost risk' rule fired because
 airTempC is 1 (≤ 2); leafWetness is 0.8 (≥ 0.6); windKmh is 2 (≤ 5).
 → Consider frost protection for this block. A person must approve before any action is taken.
+```
+
+*The same alert narrated by a live model — through the Code subscription quota, one captured run (model wording varies; every figure synthetic):*
+
+```
+$ dotnet run --project src/AgriSentry.Narrate
+
+▇ VIN-01 (grape) · frost · Alert
+  facts : airTempC=1 (≤2); leafWetness=0.8 (≥0.6); windKmh=2 (≤5)
+  model : Block VIN-01 (wine grape) has triggered a Frost risk alert. All
+          three conditions in the rule are met: air temperature is 1°C, at
+          or below the 2°C threshold; leaf wetness is 0.8, at or above the
+          0.6 threshold; and wind speed is 2 km/h, at or below the 5 km/h
+          threshold. Low temperature, wet leaves and calm air together
+          match the conditions this rule watches for frost.
+  guard : PASS — kept the model's words.
+
+3 alerts: 3 kept the model's words, 0 fell back to the template.
+Numbers came from the engine throughout; the guardrail enforced it on a live model.
 ```
 
 The narrator is a deterministic template by default — offline and always available — and the **same pipeline has been run on a live LLM**: on a real model the engine still owns every number, the guardrail holds, and anything it rejects falls back to the template. The moat is not "an AI was plugged in"; it is the grounding, the guardrail, the human approval and the audit around it.
