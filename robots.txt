@@ -1,22 +1,18 @@
 # AgriSentry showcase -- https://zeeekrom.github.io/agrisentry/
-# Search engines are welcome. AI training / scraping crawlers are not.
+# AI *training* crawlers are not welcome. AI *search / answer* agents and ordinary
+# search engines ARE welcome -- they answer queries, they do not train on the content.
 #
 # NOTE: this is a GitHub *project* page served under /agrisentry/. Crawlers read
-# robots.txt from the domain root (zeeekrom.github.io/robots.txt), so to be
-# fully effective these rules also need to live there. Kept here for a custom
-# domain / root move, and as a clear statement of intent alongside the terms.
+# robots.txt from the domain ROOT (zeeekrom.github.io/robots.txt), so the EFFECTIVE
+# rules live there (already updated to match this). This file is declaratory -- kept
+# as a clear statement of intent alongside the terms, and for a custom-domain move.
 
+# --- AI training crawlers: blocked ---
 User-agent: GPTBot
-Disallow: /
-User-agent: ChatGPT-User
-Disallow: /
-User-agent: OAI-SearchBot
 Disallow: /
 User-agent: ClaudeBot
 Disallow: /
 User-agent: anthropic-ai
-Disallow: /
-User-agent: Claude-Web
 Disallow: /
 User-agent: CCBot
 Disallow: /
@@ -26,11 +22,9 @@ User-agent: Applebot-Extended
 Disallow: /
 User-agent: Bytespider
 Disallow: /
-User-agent: PerplexityBot
+User-agent: Meta-ExternalAgent
 Disallow: /
 User-agent: Amazonbot
-Disallow: /
-User-agent: Meta-ExternalAgent
 Disallow: /
 User-agent: Diffbot
 Disallow: /
@@ -39,6 +33,20 @@ Disallow: /
 User-agent: Timpibot
 Disallow: /
 
-# Everyone else (including Googlebot and Bingbot) may crawl.
+# --- AI search / answer agents: allowed (they answer queries, they do not train) ---
+User-agent: OAI-SearchBot
+Allow: /
+User-agent: ChatGPT-User
+Allow: /
+User-agent: Claude-SearchBot
+Allow: /
+User-agent: Claude-User
+Allow: /
+User-agent: PerplexityBot
+Allow: /
+User-agent: Perplexity-User
+Allow: /
+
+# --- Everyone else (including Googlebot and Bingbot) may crawl ---
 User-agent: *
 Disallow:
