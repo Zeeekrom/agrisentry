@@ -48,9 +48,9 @@
 | 给谁用 | 中小型农场和经营它们的人——经理、田间工人、农场主 |
 | 解决什么 | 农场数据散落在纸质与表格里；高风险事件（如霜冻）发现得晚，且留不下"谁做了什么决定"的记录 |
 | 做法 | 一套数据模型、一个配置驱动的规则引擎、一个*系统建议 / 人工批准*的闭环，以及防篡改记录 |
-| AI 智能体 | 会盯、会讲、会答——grounding 在引擎的事实上、由人批准；它从不自己动手 |
+| AI 智能体 | 会盯、会讲、会看、会答——grounding 在引擎的事实上、由人批准；它从不自己动手 |
 | 技术栈 | Power Apps · Dataverse · Power Automate · Power BI · Azure Functions (.NET/C#) · Anthropic / Azure OpenAI |
-| 证据 | 24 个自动化测试（规则引擎 + 智能体的 grounding）、模拟 24 小时窗口内的 278 条合成告警、带文解释器已在真实大模型上跑过、文本化 Power BI 工程、GitHub Actions CI——源码私有 |
+| 证据 | 43 个自动化测试（规则引擎 + 智能体的 grounding + 叶片视觉）、模拟 24 小时窗口内的 278 条合成告警、带文解释器与叶片视觉都已在真实模型上跑过、文本化 Power BI 工程、GitHub Actions CI——源码私有 |
 | 数据 | 仅合成——无真实农场、传感器、天气或个人数据 |
 | 状态 | 开发中。作品原型；未经农场验证、非生产就绪 |
 
@@ -107,7 +107,7 @@ AgriSentry 的 AI 是一个**受约束的农场智能体**:聪明到能帮上忙
 
 - **会盯** —— 规则引擎持续跑在天气与传感器数据上,把要紧的告警挑出来(霜冻、晚疫、灰霉、土壤缺水……)。
 - **会讲** —— 每条告警,智能体写出*为什么触发*和*该考虑什么*,用人话。**已做实,并在真实大模型上跑过。**
-- **会看** *(设计中)* —— 田间工人拍一张叶片照,图像模型给出候选病害与置信度,把握不准时转人工。
+- **会看** —— 田间工人拍一张叶片照,视觉模型从**封闭集**里给出候选病害 + 置信度,把握不准时转人工——它从不自行定性。**已做实,并在真实视觉模型上跑过。**
 - **会答** *(设计中)* —— "今天哪些地块要关注?"这类问题,grounding 在农场自己的数据上。
 - **它不动手。** 开防霜泵、喷药都是物理动作;智能体只建议,由具名的人批准。
 
@@ -141,6 +141,20 @@ Numbers came from the engine throughout; the guardrail enforced it on a live mod
 ```
 
 叙述默认由确定性模板生成——离线、永远可用——而**同一条管道也已在真实大模型上跑过**:在真模型上,数字依旧全部来自引擎,护栏照常生效,被挡下的就回退到模板。护城河不是"接了个 AI",而是外面那层 grounding、护栏、人工批准与审计。
+
+**模型给候选,人来确认——图像也一样。** "会看"是同一套规矩用在照片上:视觉模型从**封闭集**(灰霉 / 白粉 / 晚疫 / 黑星 / 健康——集外的标签一律丢掉)里给候选病害,置信门控把它变成一个**仍需人确认**的决定,护栏让"AI 从不自动定性"成为可执行约束。在真实公开叶片图上、真视觉模型(走 Code 额度)跑的一次:
+
+```
+$ dotnet run --project src/AgriSentry.Narrate -- vision apple apple-scab.jpg potato potato-late-blight.jpg grape grape-healthy.jpg
+
+▇ apple-scab.jpg (apple)          top: AppleScab @ 72%  · RaiseAlert · requiresHumanConfirm: true
+▇ potato-late-blight.jpg (potato) top: LateBlight @ 72%  · RaiseAlert · requiresHumanConfirm: true
+▇ grape-healthy.jpg (grape)       top: Healthy    @ 90%  · NoFinding
+
+3 photos · 2 candidate alerts (all need human confirm) · auto-diagnosed without a person: 0
+```
+
+图片来自公开 PlantVillage 数据集(真实叶片,非真实农场);demo 模型,非生产精度。
 
 ## 设计原则
 
@@ -176,7 +190,8 @@ Numbers came from the engine throughout; the guardrail enforced it on a live mod
 | Dataverse 数据模型（表、选项集、关系、种子 + 导入数据） | **设计中** · 就等部署（缺一个可用环境） |
 | Power Apps（地块总览 / 巡检录入 / 告警确认） | **设计中** |
 | Power Automate（通知 → 批准 → 不可改审计） | **设计中** |
-| 叶片拍照病害识别、对话式 copilot | **设计中** |
+| 叶片拍照病害识别（封闭病害集 + 置信门控 + 护栏） | **已建** · 9 测试 · 已在真实视觉模型上跑过、真实公开叶片 |
+| 对话式 copilot（会答） | **设计中** |
 
 ## 技术
 
@@ -194,7 +209,7 @@ Numbers came from the engine throughout; the guardrail enforced it on a live mod
 ## 哪些还没做
 
 - **live Power Platform 暂缓。** 规则引擎、AI 带文解释器、看板都已建;Dataverse / Power Apps / Power Automate 这层已设计好、数据也备齐,但还没部署到 live 环境。solution 与种子数据都存在 Git 里,拿到环境几分钟即可部署。
-- 智能体的*会看*(叶片识别)与*会答*(copilot)是设计中,未建。
+- 智能体的*会答*(copilot)是设计中,未建;*会看*(叶片识别)已做实、在真实视觉模型上跑过,但用的是 demo 模型(非生产精度),每条候选都由人确认。
 - 风险阈值仅为示意,实际需要农艺校准。
 - 单租户演示;多租户与更高保证档是"已按此设计",但尚未构建。
 - 水产养殖按设计不在范围内。

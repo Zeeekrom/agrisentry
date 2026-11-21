@@ -48,9 +48,9 @@ This is an independent portfolio prototype. It is **not affiliated with any real
 | Who it is for | Small / mid farms and the people who run them — managers, field workers, owners |
 | The problem | Farm data is scattered across paper and spreadsheets; high-risk events (e.g. frost) are caught late and leave no record of who decided what |
 | Approach | One data model, a configuration-driven rule engine, a *system-suggests / human-approves* loop, and tamper-evident records |
-| The AI agent | Watches, explains and answers — grounded in the engine's facts and approved by a person; it never acts on its own |
+| The AI agent | Watches, explains, sees and answers — grounded in the engine's facts and approved by a person; it never acts on its own |
 | Stack | Power Apps · Dataverse · Power Automate · Power BI · Azure Functions (.NET/C#) · Anthropic / Azure OpenAI |
-| Evidence | 24 automated tests (rule engine + the agent's grounding), 278 synthetic alerts over a simulated 24-hour window, the grounded narrator run on a live LLM, a text-based Power BI project and GitHub Actions CI — source private |
+| Evidence | 43 automated tests (rule engine + the agent's grounding + leaf vision), 278 synthetic alerts over a simulated 24-hour window, the grounded narrator and the leaf vision each run on a live model, a text-based Power BI project and GitHub Actions CI — source private |
 | Data | Synthetic only — no real farm, sensor, weather or personal data |
 | Status | In development. A portfolio prototype; not validated with a farm and not production-ready |
 
@@ -107,7 +107,7 @@ AgriSentry's AI is a **constrained farm agent**: capable enough to help, held ti
 
 - **Watches** — the rule engine runs continuously over the weather and sensor feed and raises the alerts that matter (frost, late blight, botrytis, low soil moisture, …).
 - **Explains** — for each alert, the agent writes *why it fired* and *what to consider*, in plain language. **Built and run on a live LLM.**
-- **Sees** *(designed)* — a field worker photographs a leaf; an image model returns a candidate disease and a confidence, routed to a person when unsure.
+- **Sees** — a field worker photographs a leaf; a vision model returns a *candidate* disease and a confidence over a closed set, routed to a person when unsure — it never diagnoses on its own. **Built and run on a live vision model.**
 - **Answers** *(designed)* — a question like "which blocks need attention today?", grounded in the farm's own data.
 - **It does not act.** Opening a frost pump or spraying is a physical action; the agent only suggests, and a named person approves.
 
@@ -141,6 +141,20 @@ Numbers came from the engine throughout; the guardrail enforced it on a live mod
 ```
 
 The narrator is a deterministic template by default — offline and always available — and the **same pipeline has been run on a live LLM**: on a real model the engine still owns every number, the guardrail holds, and anything it rejects falls back to the template. The moat is not "an AI was plugged in"; it is the grounding, the guardrail, the human approval and the audit around it.
+
+**The model proposes; a person confirms — for images too.** The *Sees* capability is the same discipline applied to a photo: a vision model proposes candidate diseases from a **closed set** (botrytis / powdery mildew / late blight / apple scab / healthy — any label outside it is dropped), a confidence gate turns that into a decision that still needs a person, and a guardrail makes "the AI never auto-diagnoses" enforceable. Run on a live vision model (Code subscription quota) over real public leaf photos:
+
+```
+$ dotnet run --project src/AgriSentry.Narrate -- vision apple apple-scab.jpg potato potato-late-blight.jpg grape grape-healthy.jpg
+
+▇ apple-scab.jpg (apple)          top: AppleScab @ 72%  · RaiseAlert · requiresHumanConfirm: true
+▇ potato-late-blight.jpg (potato) top: LateBlight @ 72%  · RaiseAlert · requiresHumanConfirm: true
+▇ grape-healthy.jpg (grape)       top: Healthy    @ 90%  · NoFinding
+
+3 photos · 2 candidate alerts (all need human confirm) · auto-diagnosed without a person: 0
+```
+
+Images are from the public PlantVillage dataset (real leaves, not a real farm); demo model, not production accuracy.
 
 ## Design principles
 
@@ -176,7 +190,8 @@ The engine and its controls came first; the AI was added on top of them, grounde
 | Dataverse data model (tables, choice sets, relationships, seed + import data) | **Designed** · ready to deploy (awaiting an environment) |
 | Power Apps (block overview / inspection / approval) | **Designed** |
 | Power Automate (notify → approve → immutable audit) | **Designed** |
-| Leaf-photo disease vision, conversational copilot | **Designed** |
+| Leaf-photo disease vision (closed disease set + confidence gate + guardrail) | **Built** · 9 tests · run on a live vision model, real public leaves |
+| Conversational copilot (answers) | **Designed** |
 
 ## Technology
 
@@ -194,7 +209,7 @@ Everything is synthetic. The weather and sensor feed, the readings, the alerts, 
 ## What is not finished
 
 - **Live Power Platform is deferred.** The rule engine, the AI narrator and the dashboard are built; the Dataverse / Power Apps / Power Automate layer is designed and data-ready but not yet deployed to a live environment. The solution and seed data are kept in Git, ready to deploy in minutes.
-- The *see* (leaf-photo) and *answer* (copilot) parts of the agent are designed, not built.
+- The *answer* (copilot) part of the agent is designed, not built. The *see* (leaf-photo) part is built and run on a live vision model, but on a demo model (not production accuracy); a person confirms every candidate.
 - Risk thresholds are illustrative and would need agronomy calibration.
 - Single-tenant demo; multi-tenant and higher-assurance profiles are designed-for, not built.
 - Aquaculture is out of scope by design.

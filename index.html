@@ -232,6 +232,31 @@
 <span class="mut">3 alerts · 3 kept the model's words · 0 fell back to the template
 numbers came from the engine throughout; the guardrail enforced it on a live model</span></pre>
     </div>
+
+    <div class="kicker" style="margin-top:34px" data-en="And it can see" data-zh="它还会看">And it can see</div>
+    <p class="lead"
+       data-en="The same discipline, for images: a vision model proposes candidate diseases from a closed set; a confidence gate and a person decide — it never diagnoses on its own. Run on a live vision model over real public leaf photos."
+       data-zh="同一套规矩用在图像上：视觉模型从封闭集里给候选病害，置信门控 + 人来定——它从不自行定性。下面是在真实公开叶片图上、真视觉模型跑的一次。">The same discipline, for images: a vision model proposes candidate diseases from a closed set; a confidence gate and a person decide — it never diagnoses on its own. Run on a live vision model over real public leaf photos.</p>
+    <div class="liverun">
+      <div class="liverun-bar">
+        <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        <span class="liverun-title">AgriSentry.Narrate -- vision · live vision model · captured sample</span>
+      </div>
+      <pre class="liverun-body"><span class="mut">backend: claude CLI vision · Code subscription quota · public PlantVillage leaves (not a real farm)</span>
+
+<span class="b">▇ apple-scab.jpg (apple)</span>
+  <span class="f">top   : AppleScab @ 72%</span>
+  <span class="g">route : RaiseAlert · requiresHumanConfirm: true</span>
+<span class="b">▇ potato-late-blight.jpg (potato)</span>
+  <span class="f">top   : LateBlight @ 72%</span>
+  <span class="g">route : RaiseAlert · requiresHumanConfirm: true</span>
+<span class="b">▇ grape-healthy.jpg (grape)</span>
+  <span class="f">top   : Healthy @ 90%</span>
+  <span class="g">route : NoFinding</span>
+
+<span class="mut">3 photos · 2 candidate alerts (all need human confirm) · auto-diagnosed without a person: 0
+closed disease set; the model proposes, a person confirms — the visual twin of "numbers from code"</span></pre>
+    </div>
   </div>
 </section>
 
