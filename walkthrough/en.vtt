@@ -1,0 +1,31 @@
+WEBVTT
+
+00:00:00.500 --> 00:00:10.150
+AgriSentry turns a farm's sensor readings into risk alerts a person approves. This is one real run -- synthetic data, nothing staged.
+
+00:00:11.350 --> 00:00:20.550
+A reading comes in for block VIN-01: air temperature one degree, leaf wetness nought point eight, wind two kilometres an hour.
+
+00:00:21.750 --> 00:00:31.275
+A deterministic rule engine checks every rule, one by one. Frost fires -- all three of its conditions hold; the other rules do not.
+
+00:00:32.475 --> 00:00:39.250
+Every number here is the rule's own threshold against the reading. The model is nowhere near this step.
+
+00:00:41.475 --> 00:00:47.625
+The alert is marked as needing a person to approve it. Nothing physical runs on its own.
+
+00:00:48.825 --> 00:00:57.025
+Now a real language model explains the alert. The numbers still come from the engine; the model only supplies the words.
+
+00:00:59.825 --> 00:01:10.700
+A guardrail enforces it: any figure in the model's text that is not a source fact is rejected, and it falls back to a deterministic template. This run passed.
+
+00:01:11.900 --> 00:01:24.175
+The same discipline covers images. A real vision model looks at a leaf and proposes one candidate -- apple scab, seventy-two percent -- from a closed set it cannot step outside of.
+
+00:01:25.375 --> 00:01:34.100
+A confidence gate turns that into an alert that still needs a person to confirm. The AI never gives a diagnosis on its own.
+
+00:01:35.300 --> 00:01:45.750
+The engine owns the numbers; the models only propose; a person approves; everything is logged. That -- the engineering around the model -- is the hard part.

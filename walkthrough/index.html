@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgriSentry · walkthrough — one real run, line by line</title>
+<meta name="description" content="A 1:46 narrated walkthrough of one real AgriSentry run: a deterministic rule engine decides, a guardrailed model only writes the words, a vision model is gated, and a person approves. Every number comes from the run record. Synthetic farm data; public PlantVillage leaf; demo model, not production accuracy.">
+<meta property="og:type" content="video.other">
+<meta property="og:title" content="AgriSentry · walkthrough — one real run, line by line">
+<meta property="og:description" content="How a deterministic rule engine, a guardrailed model and a gated vision model handle one real farm-risk run, with the code that ran each step. Synthetic data.">
+<meta property="og:image" content="https://zeeekrom.github.io/agrisentry/walkthrough/poster.jpg">
+<meta property="og:video" content="https://zeeekrom.github.io/agrisentry/walkthrough/walkthrough-1080.mp4?v=1">
+<meta property="og:video:type" content="video/mp4">
+<meta property="og:video:width" content="1920">
+<meta property="og:video:height" content="1080">
+<style>
+  html, body { margin: 0; height: 100%; background: #08140d; }
+  body { display: flex; flex-direction: column; }
+  .bar { flex: none; display: flex; flex-wrap: wrap; gap: 4px 18px; align-items: baseline; padding: 10px 16px; color: #c3cdc6;
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; border-bottom: 1px solid #1b3a25; }
+  .bar b { color: #eaf3ed; font-weight: 600; }
+  .bar span { color: #7d9487; }
+  .stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; }
+  /* the player's box matches the 16:9 frame, so the browser sizes subtitles to the picture, not to a tall phone screen */
+  video { display: block; width: 100%; height: auto; max-height: 100%; aspect-ratio: 16 / 9; object-fit: contain; background: #08140d; }
+  .zk-legal { flex: none; margin: 0; padding: 10px 16px 12px; background: #0d2318; border-top: 1px solid #1b3a25;
+    color: #c3cdc6; font: 13px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; text-align: center; }
+  .zk-legal p { margin: 2px 0; }
+  .zk-legal a { color: #ffffff; text-decoration: underline; text-underline-offset: 2px; }
+  .zk-legal .zk-credits { font-size: 11.5px; color: #7d9487; }
+</style>
+</head>
+<body>
+<nav class="bar">
+  <b>One real run, line by line</b>
+  <span>· 1:46 · English narration with captions (中文字幕 available in the player) · synthetic data</span>
+</nav>
+<main class="stage">
+<video controls playsinline preload="metadata" poster="poster.jpg?v=1">
+  <source src="walkthrough-720.mp4?v=1" type="video/mp4" media="(max-width: 900px)">
+  <source src="walkthrough-1080.mp4?v=1" type="video/mp4">
+  <track kind="subtitles" src="en.vtt?v=1" srclang="en" label="English">
+  <track kind="subtitles" src="zh.vtt?v=1" srclang="zh-CN" label="中文">
+</video>
+</main>
+<footer class="zk-legal">
+  <p lang="en">© 2026 AgriSentry. All rights reserved. · <a href="../terms.html">Terms, licences and privacy</a> · <a href="https://github.com/Zeeekrom/agrisentry">About the project</a></p>
+  <p class="zk-credits">Synthetic farm data · public PlantVillage leaf · demo model, not production accuracy. The on-screen code is the real code that ran each step. Third-party credits (voice, fonts) are listed in the terms.</p>
+</footer>
+</body>
+</html>

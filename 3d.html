@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgriSentry — 3D farm view</title>
+<meta name="description" content="An interactive low-poly 3D farm — blocks flagged by risk status — modelled on a typical Tasmanian mixed farm layout. Part of the AgriSentry portfolio prototype. Synthetic data; runs entirely in the browser.">
+<style>
+  :root{
+    --green-deep:#153C29; --green:#1B5E20; --green-soft:#2E7D4F;
+    --amber:#B45309; --amber-lt:#E0A24B; --red:#C0392B;
+    --ink:#1D2A22; --muted:#6B7A6F; --bg:#F5F2E9; --card:#FFFFFF; --line:#E3DDCC;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;overflow:hidden;}
+  .serif{font-family:Georgia,"Times New Roman",serif;}
+  a{color:var(--amber-lt);text-decoration:none;}
+
+  header{background:var(--green-deep);color:#fff;padding:12px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;flex:none;}
+  header .brand{font-size:20px;font-weight:700;}
+  header .sub{font-size:13px;color:#9FC3AB;margin-left:8px;}
+  header .spacer{flex:1;}
+  header .back{font-size:14px;border:1px solid rgba(255,255,255,.4);border-radius:7px;padding:6px 14px;color:#fff;}
+  header .back:hover{background:rgba(255,255,255,.1);}
+  .langbar{display:inline-flex;border:1px solid rgba(255,255,255,.35);border-radius:100px;overflow:hidden;}
+  .lang-btn{background:transparent;color:#cfe0d4;border:0;padding:6px 16px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;}
+  .lang-btn[aria-pressed="true"]{background:var(--amber-lt);color:#153C29;}
+
+  .previewbar{flex:none;background:#F3E7CE;border-bottom:1px solid #E6D3A8;color:#6b5418;font-size:13px;text-align:center;padding:7px 16px;line-height:1.45;}
+  .previewbar b{color:#8a5a12;}
+
+  main{flex:1;position:relative;min-height:0;}
+  #stage{position:absolute;inset:0;}
+  #stage canvas{display:block;}
+
+  .blk-label{background:rgba(255,255,255,.92);color:#1D2A22;border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:12px;font-weight:700;font-family:"Segoe UI",system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.12);}
+
+  .panel{position:absolute;top:16px;right:16px;width:272px;max-width:calc(100% - 32px);background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 10px 30px rgba(21,60,41,.16);padding:18px;}
+  .panel .code{font-size:24px;font-weight:700;color:var(--green-deep);letter-spacing:.5px;}
+  .panel .row{display:flex;justify-content:space-between;gap:10px;font-size:14px;margin-top:10px;color:var(--muted);}
+  .panel .row b{color:var(--ink);text-align:right;}
+  .badge{display:inline-block;padding:2px 10px;border-radius:100px;font-size:13px;font-weight:700;color:#fff;}
+  .s-ok{background:var(--green-soft);} .s-watch{background:var(--amber-lt);color:#153C29;} .s-alert{background:var(--red);}
+  .panel .hint{font-size:12px;color:var(--muted);margin-top:14px;border-top:1px solid var(--line);padding-top:10px;line-height:1.4;}
+
+  .legend{position:absolute;left:16px;bottom:16px;background:rgba(255,255,255,.92);border:1px solid var(--line);border-radius:10px;padding:12px 14px;font-size:13px;}
+  .legend .t{font-weight:700;color:var(--green-deep);margin-bottom:8px;}
+  .legend .item{display:flex;align-items:center;gap:8px;margin-top:5px;color:#43514a;}
+  .dot{width:13px;height:13px;border-radius:3px;flex:none;}
+  .d-ok{background:var(--green-soft);} .d-watch{background:var(--amber-lt);} .d-alert{background:var(--red);}
+  .hintbar{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;background:rgba(21,60,41,.82);color:#EAF2EC;font-size:13px;padding:8px 16px;border-radius:100px;white-space:nowrap;}
+  .note{position:absolute;right:16px;bottom:16px;font-size:11px;color:var(--muted);}
+
+  #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted);font-size:15px;background:var(--bg);padding:20px;text-align:center;}
+  .spin{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #err{display:none;max-width:440px;line-height:1.5;}
+
+  @media (max-width:640px){
+    .legend{bottom:66px;} .hintbar{bottom:18px;} .note{display:none;}
+    .panel{width:auto;top:auto;left:16px;right:16px;bottom:116px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <span class="brand serif">AgriSentry</span>
+    <span class="sub" data-en="3D farm view · synthetic" data-zh="3D 农场视图 · 合成">3D farm view · synthetic</span>
+  </div>
+  <div class="spacer"></div>
+  <div class="langbar" role="group" aria-label="Language">
+    <button class="lang-btn" data-lang="en" onclick="setLang('en')" aria-pressed="true">English</button>
+    <button class="lang-btn" data-lang="zh" onclick="setLang('zh')" aria-pressed="false">中文</button>
+  </div>
+  <a class="back" href="index.html" data-en="← Back" data-zh="← 返回">← Back</a>
+</header>
+
+<div class="previewbar" data-en="◆ Preview — a concept view, laid out like a typical Tasmanian mixed farm. Blocks, crops, layout and visual style are customised per farm or client; this is not the final look." data-zh="◆ 预览效果 —— 概念演示,按塔州典型混合农场的样子布局。地块、作物、布局与视觉风格均可按农场或客户个性化定制,这不是最终外观。">◆ Preview — a concept view, laid out like a typical Tasmanian mixed farm. Blocks, crops, layout and visual style are customised per farm or client; this is not the final look.</div>
+
+<main>
+  <div id="stage"></div>
+
+  <div class="panel" id="panel" style="display:none">
+    <div class="code" id="p-code">—</div>
+    <div class="row"><span data-en="Crop" data-zh="作物">Crop</span><b id="p-crop">—</b></div>
+    <div class="row"><span data-en="Lead rule" data-zh="主规则">Lead rule</span><b id="p-rule">—</b></div>
+    <div class="row"><span data-en="Status" data-zh="状态">Status</span><b id="p-status">—</b></div>
+    <div class="row"><span data-en="Open alerts" data-zh="未处理告警">Open alerts</span><b id="p-alerts">—</b></div>
+    <div class="hint" data-en="Synthetic data. Status = most severe open alert on the block." data-zh="合成数据。状态 = 该地块最严重的未处理告警。">Synthetic data. Status = most severe open alert on the block.</div>
+  </div>
+
+  <div class="legend">
+    <div class="t" data-en="Risk status" data-zh="风险状态">Risk status</div>
+    <div class="item"><span class="dot d-ok"></span><span data-en="OK — no open alerts" data-zh="正常 — 无未处理告警">OK — no open alerts</span></div>
+    <div class="item"><span class="dot d-watch"></span><span data-en="Watch — warning" data-zh="注意 — 预警">Watch — warning</span></div>
+    <div class="item"><span class="dot d-alert"></span><span data-en="Alert — needs a person" data-zh="告警 — 需人处理">Alert — needs a person</span></div>
+  </div>
+
+  <div class="hintbar" data-en="Drag to orbit · scroll to zoom · click a block" data-zh="拖动旋转 · 滚轮缩放 · 点击地块">Drag to orbit · scroll to zoom · click a block</div>
+  <div class="note" data-en="three.js · runs in your browser · no cloud" data-zh="three.js · 浏览器内运行 · 不用云">three.js · runs in your browser · no cloud</div>
+
+  <div id="loading">
+    <div class="spin" id="spin"></div>
+    <div id="loadtext" data-en="Loading 3D farm…" data-zh="正在加载 3D 农场…">Loading 3D farm…</div>
+    <div id="err"></div>
+  </div>
+</main>
+
+<!-- Language + info panel. Classic script so the page still translates if three.js is blocked. -->
+<script>
+  var LANG_KEY='agrisentry-lang';
+  var curLang='en';
+  var selectedBlock=null;
+  var STATUS_WORD={ ok:{en:'OK',zh:'正常'}, watch:{en:'Watch',zh:'注意'}, alert:{en:'Alert',zh:'告警'} };
+
+  function applyStatic(l){
+    var nodes=document.querySelectorAll('[data-en]');
+    for(var i=0;i<nodes.length;i++){
+      var v=(l==='zh')?nodes[i].getAttribute('data-zh'):nodes[i].getAttribute('data-en');
+      if(v!==null) nodes[i].textContent=v;
+    }
+  }
+  function renderPanel(){
+    if(!selectedBlock) return;
+    var b=selectedBlock, l=curLang;
+    document.getElementById('p-code').textContent=b.code;
+    document.getElementById('p-crop').textContent=b.crop[l];
+    document.getElementById('p-rule').textContent=(b.status==='ok')?(l==='zh'?'—（无）':'— (none)'):b.rule[l];
+    var st=document.getElementById('p-status');
+    st.textContent=STATUS_WORD[b.status][l];
+    st.className='badge s-'+b.status;
+    document.getElementById('p-alerts').textContent=b.alerts;
+  }
+  window.selectBlock=function(b){
+    selectedBlock=b;
+    document.getElementById('panel').style.display='block';
+    renderPanel();
+  };
+  function setLang(l){
+    if(l!=='zh') l='en';
+    curLang=l;
+    document.documentElement.lang=(l==='zh')?'zh-CN':'en';
+    applyStatic(l);
+    var btns=document.querySelectorAll('.lang-btn');
+    for(var j=0;j<btns.length;j++) btns[j].setAttribute('aria-pressed', btns[j].getAttribute('data-lang')===l?'true':'false');
+    renderPanel();
+    try{ localStorage.setItem(LANG_KEY,l); }catch(e){}
+  }
+  (function(){
+    var init='en';
+    try{
+      var s=localStorage.getItem(LANG_KEY);
+      if(s) init=s;
+      else if(navigator.language && navigator.language.toLowerCase().indexOf('zh')===0) init='zh';
+    }catch(e){}
+    setLang(init);
+  })();
+
+  function show3DError(){
+    var spin=document.getElementById('spin'); if(spin) spin.style.display='none';
+    var lt=document.getElementById('loadtext'); if(lt) lt.style.display='none';
+    var e=document.getElementById('err');
+    e.style.display='block';
+    e.textContent=(curLang==='zh')
+      ? '3D 组件加载失败（可能是网络拦截了 three.js）。项目其余部分不依赖它。'
+      : 'The 3D component failed to load (three.js may be blocked by the network). The rest of the project does not depend on it.';
+  }
+  window.__booted=false;
+  setTimeout(function(){ if(!window.__booted) show3DError(); }, 12000);
+</script>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+window.__booted = true;
+
+/* ---------- palette ---------- */
+const COL = {
+  sky:0xBFD9E6, pasture:0x86A94E, pastureDk:0x6F9140,
+  soil:0x8D6E63, soilTilled:0x9C6B4A, track:0xCBB58C,
+  water:0x3E86A8, waterRim:0x7C6A4A,
+  trunk:0x6D4C41, canopy1:0x4CAF50, canopy2:0x43A047, canopy3:0x66BB6A,
+  firA:0x2E7D32, firB:0x388E3C, firC:0x43A047,
+  vine:0x7CB342, net:0xFFFFFF, tunnel:0xEAF4F7,
+  shed:0x7C8A6E, shedRoof:0x455047, silo:0xB9C2C9, siloTop:0x8A969E,
+  statusOk:0x2E7D4F, statusWatch:0xE0A24B, statusAlert:0xC0392B
+};
+const STATUS_HEX = { ok:COL.statusOk, watch:COL.statusWatch, alert:COL.statusAlert };
+
+/* ---------- blocks (same data model as the panel) ---------- */
+const BW = 6, BD = 6;           // block footprint
+const BLOCKS = [
+  {code:'VIN-01', type:'vineyard', crop:{en:'Vineyard',zh:'葡萄园'},   rule:{en:'Frost risk',zh:'霜冻风险'},          status:'alert', alerts:9, bx:-8, bz:-4.5},
+  {code:'POT-02', type:'potato',   crop:{en:'Potato',zh:'马铃薯'},     rule:{en:'Late blight',zh:'晚疫病'},           status:'watch', alerts:4, bx:0,  bz:-4.5},
+  {code:'CHE-03', type:'cherry',   crop:{en:'Cherry',zh:'樱桃'},       rule:{en:'Rain-cracking',zh:'裂果'},           status:'ok',    alerts:0, bx:8,  bz:-4.5},
+  {code:'APP-04', type:'apple',    crop:{en:'Apple',zh:'苹果'},        rule:{en:'Apple scab',zh:'苹果黑星病'},        status:'watch', alerts:3, bx:-8, bz:4.5},
+  {code:'BER-05', type:'berry',    crop:{en:'Berry',zh:'浆果'},        rule:{en:'Botrytis (grey mould)',zh:'灰霉病'}, status:'alert', alerts:7, bx:0,  bz:4.5},
+  {code:'VEG-06', type:'leafy',    crop:{en:'Leafy greens',zh:'叶菜'}, rule:{en:'Irrigation need',zh:'灌溉需求'},     status:'ok',    alerts:0, bx:8,  bz:4.5},
+];
+
+/* ---------- renderer / scene ---------- */
+const stage = document.getElementById('stage');
+let W = stage.clientWidth, H = stage.clientHeight;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(COL.sky);
+scene.fog = new THREE.Fog(COL.sky, 46, 95);
+
+const camera = new THREE.PerspectiveCamera(42, W/H, 0.1, 300);
+camera.position.set(19, 17, 23);
+
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setSize(W, H);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+stage.appendChild(renderer.domElement);
+
+const labelRenderer = new CSS2DRenderer();
+labelRenderer.setSize(W, H);
+labelRenderer.domElement.style.position = 'absolute';
+labelRenderer.domElement.style.top = '0';
+labelRenderer.domElement.style.left = '0';
+labelRenderer.domElement.style.pointerEvents = 'none';
+stage.appendChild(labelRenderer.domElement);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 10;
+controls.maxDistance = 55;
+controls.maxPolarAngle = Math.PI/2 - 0.05;
+controls.target.set(0, 0.5, 1);
+
+/* ---------- lights ---------- */
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9fb08a, 0.7));
+const sun = new THREE.DirectionalLight(0xfff4e0, 1.5);
+sun.position.set(14, 22, 10);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.near = 1; sun.shadow.camera.far = 70;
+sun.shadow.camera.left = -28; sun.shadow.camera.right = 28;
+sun.shadow.camera.top = 28; sun.shadow.camera.bottom = -28;
+sun.shadow.bias = -0.0004;
+scene.add(sun);
+
+/* ---------- helpers ---------- */
+function M(color, extra){ return new THREE.MeshStandardMaterial(Object.assign({color:color, roughness:0.92, metalness:0.0, flatShading:true}, extra||{})); }
+function mesh(geo, material, cast, rec){ const m=new THREE.Mesh(geo, material); if(cast) m.castShadow=true; if(rec) m.receiveShadow=true; return m; }
+
+// a hollow rectangular border as ONE extruded mesh (no overlapping boxes -> no z-fighting)
+function frameMesh(outerW, outerD, thick, h, material){
+  const hw=outerW/2, hd=outerD/2, iw=hw-thick, id=hd-thick;
+  const s=new THREE.Shape();
+  s.moveTo(-hw,-hd); s.lineTo(hw,-hd); s.lineTo(hw,hd); s.lineTo(-hw,hd); s.closePath();
+  const hole=new THREE.Path();
+  hole.moveTo(-iw,-id); hole.lineTo(-iw,id); hole.lineTo(iw,id); hole.lineTo(iw,-id); hole.closePath();
+  s.holes.push(hole);
+  const g=new THREE.ExtrudeGeometry(s,{depth:h, bevelEnabled:false});
+  g.rotateX(-Math.PI/2); g.computeBoundingBox(); g.translate(0, -g.boundingBox.min.y, 0);
+  const m=new THREE.Mesh(g, material); m.castShadow=true; m.receiveShadow=true;
+  return m;
+}
+
+function lowTree(s, canopyCol){
+  const g = new THREE.Group();
+  const trunk = mesh(new THREE.CylinderGeometry(0.12*s, 0.17*s, 0.8*s, 6), M(COL.trunk), true, false);
+  trunk.position.y = 0.4*s; g.add(trunk);
+  const c1 = mesh(new THREE.IcosahedronGeometry(0.72*s, 0), M(canopyCol), true, false);
+  c1.position.y = 1.15*s; g.add(c1);
+  const c2 = mesh(new THREE.IcosahedronGeometry(0.5*s, 0), M(canopyCol), true, false);
+  c2.position.set(0.28*s, 1.55*s, 0.12*s); g.add(c2);
+  return g;
+}
+function fir(s){
+  const g = new THREE.Group();
+  const trunk = mesh(new THREE.CylinderGeometry(0.1*s, 0.13*s, 0.5*s, 6), M(0x5D4037), true, false);
+  trunk.position.y = 0.25*s; g.add(trunk);
+  const cols = [COL.firA, COL.firB, COL.firC];
+  for(let i=0;i<3;i++){
+    const cone = mesh(new THREE.ConeGeometry((0.85-i*0.22)*s, 0.95*s, 7), M(cols[i]), true, false);
+    cone.position.y = (0.75 + i*0.62)*s; g.add(cone);
+  }
+  return g;
+}
+
+/* ---------- ground, hills, boundary ---------- */
+const ground = mesh(new THREE.PlaneGeometry(90, 76), M(COL.pasture), false, true);
+ground.rotation.x = -Math.PI/2; ground.position.y = 0; scene.add(ground);
+
+// rolling hills behind the farm
+(function hills(){
+  const data = [[-26,-30,10,0x7EA048],[6,-34,14,0x749642],[30,-28,11,0x86A94E]];
+  for(const [x,z,r,c] of data){
+    const h = mesh(new THREE.IcosahedronGeometry(r, 1), M(c), false, true);
+    h.position.set(x, -r*0.62, z); h.scale.y = 0.4; scene.add(h);
+  }
+})();
+
+// farm boundary field (slightly darker rectangle under the blocks)
+const field = mesh(new THREE.BoxGeometry(34, 0.08, 26), M(COL.pastureDk), false, true);
+field.position.set(0, 0.04, 0); scene.add(field);
+
+/* ---------- access tracks (dirt) ---------- */
+function track(w, d, x, z){
+  const t = mesh(new THREE.BoxGeometry(w, 0.1, d), M(COL.track), false, true);
+  t.position.set(x, 0.1, z); scene.add(t);
+}
+track(34, 2.2, 0, 0);        // central horizontal track between the two rows
+track(2.2, 26, -4, 0);       // vertical tracks between columns
+track(2.2, 26, 4, 0);
+track(5, 10, 0, 15.5);       // main entrance track to the farmyard
+
+/* ---------- blocks ---------- */
+const pads = [];             // raycast targets
+const beacons = [];
+
+function buildBlock(b){
+  const g = new THREE.Group();
+  g.position.set(b.bx, 0, b.bz);
+  b._group = g;
+
+  // soil / plot pad (the clickable target), full footprint, top at y=0.3
+  const tilled = (b.type==='potato' || b.type==='leafy' || b.type==='berry');
+  const pad = mesh(new THREE.BoxGeometry(BW, 0.3, BD), M(tilled ? COL.soilTilled : COL.pasture), true, true);
+  pad.position.y = 0.15; pad.userData.block = b; g.add(pad); pads.push(pad);
+
+  // status border as a single extruded frame: outer sits just beyond the pad,
+  // bottom buried below the soil surface -> no coplanar faces, no z-fighting
+  const em = M(STATUS_HEX[b.status], {roughness:0.6});
+  const frame = frameMesh(BW + 0.12, BD + 0.12, 0.5, 0.52, em);
+  frame.userData.block = b; g.add(frame); pads.push(frame);
+
+  // crop decor
+  if(b.type==='vineyard') buildVineyard(g);
+  else if(b.type==='potato') buildPotato(g);
+  else if(b.type==='cherry') buildOrchard(g, true, 0xD3415B);   // netted, with cherries
+  else if(b.type==='apple') buildOrchard(g, false, 0xC0392B);
+  else if(b.type==='berry') buildTunnels(g);
+  else if(b.type==='leafy') buildLeafy(g);
+
+  // corner signpost — anchors the label (and alert light) so nothing floats detached
+  const cx = -BW/2 + 0.5, cz = -BD/2 + 0.5, postH = 2.6;
+  const post = mesh(new THREE.CylinderGeometry(0.07,0.07,postH,6), M(0x8d8d8d), true, false);
+  post.position.set(cx, postH/2, cz); g.add(post);
+  const flag = mesh(new THREE.BoxGeometry(0.78,0.5,0.08), M(STATUS_HEX[b.status], {roughness:0.5}), true, false);
+  flag.position.set(cx + 0.46, 1.7, cz); g.add(flag);
+
+  // label sits at the top of the post (visually tethered by the post)
+  const div = document.createElement('div');
+  div.className = 'blk-label'; div.textContent = b.code;
+  const label = new CSS2DObject(div);
+  label.position.set(cx, postH + 0.5, cz); g.add(label);
+
+  // alert light caps the post (pulses) — no longer a ball floating in mid-air
+  if(b.status==='alert'){
+    const beacon = mesh(new THREE.SphereGeometry(0.2, 18, 18),
+      new THREE.MeshStandardMaterial({color:0xC0392B, emissive:0xC0392B, emissiveIntensity:0.95, roughness:0.4, flatShading:true}), false, false);
+    beacon.position.set(cx, postH + 0.08, cz); g.add(beacon);
+    beacons.push({beacon, baseY:postH + 0.08});
+  }
+
+  scene.add(g);
+}
+
+function buildVineyard(g){
+  const rows = 5, len = BD - 1.2;
+  for(let r=0;r<rows;r++){
+    const x = -BW/2 + 1.0 + r*((BW-2)/(rows-1));
+    // trellis wire line
+    const wire = mesh(new THREE.BoxGeometry(0.05, 0.05, len), M(0x9a9a9a), false, false);
+    wire.position.set(x, 0.95, 0); g.add(wire);
+    // end posts
+    for(const z of [-len/2, len/2]){
+      const p = mesh(new THREE.CylinderGeometry(0.05,0.05,1.1,5), M(0x7d6b57), true, false);
+      p.position.set(x, 0.85, z); g.add(p);
+    }
+    // vines
+    const n = 6;
+    for(let i=0;i<n;i++){
+      const z = -len/2 + (i+0.5)*(len/n);
+      const v = mesh(new THREE.IcosahedronGeometry(0.33, 0), M(COL.vine), true, false);
+      v.position.set(x, 0.75, z); g.add(v);
+    }
+  }
+}
+
+function buildPotato(g){
+  const rows = 6, len = BD - 1.0;
+  for(let r=0;r<rows;r++){
+    const x = -BW/2 + 0.9 + r*((BW-1.8)/(rows-1));
+    const ridge = mesh(new THREE.BoxGeometry(0.45, 0.28, len), M(COL.soil), true, true);
+    ridge.position.set(x, 0.42, 0); g.add(ridge);
+    const n = 5;
+    for(let i=0;i<n;i++){
+      const z = -len/2 + (i+0.5)*(len/n);
+      const leaf = mesh(new THREE.IcosahedronGeometry(0.22, 0), M(0x5E9A3A), false, false);
+      leaf.position.set(x, 0.62, z); leaf.scale.y = 0.7; g.add(leaf);
+    }
+  }
+}
+
+function buildOrchard(g, netted, fruitCol){
+  const cols = 3, rowz = 4;
+  for(let c=0;c<cols;c++){
+    for(let r=0;r<rowz;r++){
+      const x = -BW/2 + 1.1 + c*((BW-2.2)/(cols-1));
+      const z = -BD/2 + 1.0 + r*((BD-2.0)/(rowz-1));
+      const tree = lowTree(0.9, COL.canopy2);
+      tree.position.set(x, 0.3, z); g.add(tree);
+      // a few fruit dots
+      for(let k=0;k<3;k++){
+        const f = mesh(new THREE.SphereGeometry(0.08, 6, 6), M(fruitCol, {roughness:0.4}), false, false);
+        f.position.set(x + (Math.random()-0.5)*0.9, 1.1 + Math.random()*0.5, z + (Math.random()-0.5)*0.9);
+        g.add(f);
+      }
+    }
+  }
+  if(netted){
+    const net = mesh(new THREE.BoxGeometry(BW-0.6, 0.04, BD-0.6),
+      new THREE.MeshStandardMaterial({color:COL.net, transparent:true, opacity:0.16, roughness:1}), false, false);
+    net.position.set(0, 2.5, 0); g.add(net);
+    for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){
+      const p = mesh(new THREE.CylinderGeometry(0.06,0.06,2.5,6), M(0x8d8d8d), true, false);
+      p.position.set(sx*(BW/2-0.6), 1.25, sz*(BD/2-0.6)); g.add(p);
+    }
+  }
+}
+
+function buildTunnels(g){
+  const n = 4, len = BD - 1.0;
+  for(let i=0;i<n;i++){
+    const x = -BW/2 + 1.0 + i*((BW-2)/(n-1));
+    const geo = new THREE.CylinderGeometry(0.7, 0.7, len, 10, 1, true, 0, Math.PI);
+    const tun = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color:COL.tunnel, transparent:true, opacity:0.5, side:THREE.DoubleSide, roughness:0.6, flatShading:true}));
+    tun.rotation.z = Math.PI/2; tun.rotation.y = Math.PI/2; tun.position.set(x, 0.75, 0); g.add(tun);
+    // berries inside (green rows)
+    const row = mesh(new THREE.BoxGeometry(0.4, 0.3, len-0.4), M(0x4E8F39), false, false);
+    row.position.set(x, 0.45, 0); g.add(row);
+  }
+}
+
+function buildLeafy(g){
+  const rows = 6, len = BD - 1.0;
+  for(let r=0;r<rows;r++){
+    const x = -BW/2 + 0.9 + r*((BW-1.8)/(rows-1));
+    const n = 7;
+    for(let i=0;i<n;i++){
+      const z = -len/2 + (i+0.5)*(len/n);
+      const p = mesh(new THREE.IcosahedronGeometry(0.2, 0), M(0x7CB342), false, false);
+      p.position.set(x, 0.42, z); p.scale.y = 0.6; g.add(p);
+    }
+  }
+}
+
+BLOCKS.forEach(buildBlock);
+
+/* ---------- farmyard (sheds + silo) ---------- */
+(function farmyard(){
+  const yard = new THREE.Group(); yard.position.set(-3, 0, 15.5);
+  const dirt = mesh(new THREE.BoxGeometry(12, 0.08, 7), M(COL.track), false, true);
+  dirt.position.y = 0.09; yard.add(dirt);
+
+  // machinery shed (gable)
+  const shed = new THREE.Group(); shed.position.set(-3.2, 0, 0);
+  const body = mesh(new THREE.BoxGeometry(4.4, 2.2, 3.4), M(COL.shed), true, true);
+  body.position.y = 1.2; shed.add(body);
+  const roof = mesh(new THREE.CylinderGeometry(0.01, 2.5, 1.3, 4, 1), M(COL.shedRoof), true, false);
+  roof.rotation.y = Math.PI/4; roof.position.y = 2.9; roof.scale.z = 1.36; shed.add(roof);
+  yard.add(shed);
+
+  // packing shed (low pitch, longer)
+  const pack = mesh(new THREE.BoxGeometry(5.2, 2.0, 3.0), M(0x8c9a80), true, true);
+  pack.position.set(2.0, 1.1, 0.2); yard.add(pack);
+  const packRoof = mesh(new THREE.BoxGeometry(5.6, 0.25, 3.4), M(COL.shedRoof), true, false);
+  packRoof.position.set(2.0, 2.2, 0.2); yard.add(packRoof);
+
+  // silo
+  const silo = new THREE.Group(); silo.position.set(4.9, 0, -1.7);
+  const cyl = mesh(new THREE.CylinderGeometry(0.95, 0.95, 3.4, 14), M(COL.silo, {metalness:0.2, roughness:0.5}), true, false);
+  cyl.position.y = 1.7; silo.add(cyl);
+  const top = mesh(new THREE.ConeGeometry(1.02, 0.9, 14), M(COL.siloTop, {metalness:0.2, roughness:0.5}), true, false);
+  top.position.y = 3.85; silo.add(top);
+  yard.add(silo);
+
+  scene.add(yard);
+})();
+
+/* ---------- irrigation dam ---------- */
+(function dam(){
+  const g = new THREE.Group(); g.position.set(16, 0, -10);
+  const berm = mesh(new THREE.CylinderGeometry(4.3, 4.6, 0.5, 20), M(COL.waterRim), false, true);
+  berm.position.y = 0.2; g.add(berm);
+  const water = mesh(new THREE.CylinderGeometry(3.7, 3.7, 0.4, 24),
+    new THREE.MeshStandardMaterial({color:COL.water, roughness:0.25, metalness:0.1, transparent:true, opacity:0.92, flatShading:true}), false, false);
+  water.position.y = 0.34; g.add(water);
+  scene.add(g);
+})();
+
+/* ---------- shelterbelts (windbreaks) ---------- */
+(function shelterbelts(){
+  // left and right edges
+  for(let i=0;i<7;i++){
+    const z = -11 + i*3.4;
+    const l = fir(1.1 + (i%2)*0.2); l.position.set(-15.5, 0, z); scene.add(l);
+    const r = fir(1.1 + ((i+1)%2)*0.2); r.position.set(15.5, 0, z); scene.add(r);
+  }
+  // back edge
+  for(let i=0;i<9;i++){
+    const x = -14 + i*3.5;
+    const t = fir(1.0 + (i%3===0?0.3:0)); t.position.set(x, 0, -13.5); scene.add(t);
+  }
+  // a couple of shade trees near the yard
+  const a = lowTree(1.2, COL.canopy1); a.position.set(-10.5, 0, 14); scene.add(a);
+  const b = lowTree(1.0, COL.canopy3); b.position.set(3.5, 0, 17.5); scene.add(b);
+})();
+
+/* ---------- selection ---------- */
+const selRing = mesh(new THREE.RingGeometry(4.0, 4.5, 36),
+  new THREE.MeshBasicMaterial({color:0x153C29, transparent:true, opacity:0.55, side:THREE.DoubleSide}), false, false);
+selRing.rotation.x = -Math.PI/2; selRing.position.y = 0.22; selRing.visible = false; scene.add(selRing);
+
+let selBlock = null;
+function setSelected(b){
+  if(selBlock && selBlock._group) selBlock._group.position.y = 0;
+  selBlock = b;
+  if(b && b._group){
+    b._group.position.y = 0.25;
+    selRing.visible = true;
+    selRing.position.set(b.bx, 0.22, b.bz);
+  }
+  if(b && window.selectBlock) window.selectBlock(b);
+}
+
+/* ---------- picking ---------- */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+function updatePointer(e){
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - r.left)/r.width)*2 - 1;
+  pointer.y = -((e.clientY - r.top)/r.height)*2 + 1;
+}
+renderer.domElement.addEventListener('pointermove', (e)=>{
+  updatePointer(e);
+  raycaster.setFromCamera(pointer, camera);
+  renderer.domElement.style.cursor = raycaster.intersectObjects(pads, false).length ? 'pointer' : 'default';
+});
+let downXY = null;
+renderer.domElement.addEventListener('pointerdown', (e)=>{ downXY = {x:e.clientX, y:e.clientY}; });
+renderer.domElement.addEventListener('pointerup', (e)=>{
+  if(!downXY) return;
+  const moved = Math.abs(e.clientX-downXY.x) + Math.abs(e.clientY-downXY.y);
+  downXY = null;
+  if(moved > 6) return;
+  updatePointer(e);
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(pads, false);
+  if(hits.length) setSelected(hits[0].object.userData.block);
+});
+
+/* ---------- resize / animate ---------- */
+function onResize(){
+  W = stage.clientWidth; H = stage.clientHeight;
+  camera.aspect = W/H; camera.updateProjectionMatrix();
+  renderer.setSize(W, H); labelRenderer.setSize(W, H);
+}
+window.addEventListener('resize', onResize);
+
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  for(let i=0;i<beacons.length;i++){
+    const bk = beacons[i];
+    bk.beacon.position.y = bk.baseY + Math.sin(t*2.4 + i)*0.08;
+    bk.beacon.material.emissiveIntensity = 0.65 + Math.sin(t*4 + i)*0.3;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+  labelRenderer.render(scene, camera);
+}
+animate();
+
+document.getElementById('loading').style.display = 'none';
+setSelected(BLOCKS.find(b=>b.status==='alert') || BLOCKS[0]);
+</script>
+<div style="position:fixed;left:10px;bottom:8px;z-index:50;font:12px 'Segoe UI',system-ui,sans-serif;color:#9bb3a0;pointer-events:auto;">© 2026 AgriSentry · <a href="terms.html" style="color:#cfe0d4;text-decoration:none;">Terms</a></div>
+</body>
+</html>
