@@ -46,7 +46,7 @@ AgriSentry makes those controls executable: the rule engine owns the numbers, a 
 |---|---|
 | Farm / operations manager | A per-block status (OK / watch / alert) and, for each alert, the rule, the readings and a plain-language recommendation |
 | Field worker | A readable explanation and a suggested action — approved by a person before anything runs |
-| Owner | An immutable record of every alert and decision — who, when and on what evidence |
+| Owner | A tamper-evident record of every alert and decision — who, when and on what evidence |
 
 A reference scenario; no real farm, farmer or organisation took part.
 
@@ -65,7 +65,9 @@ Frost on a vineyard is only the lead example; adding a crop or a rule is a confi
 
 - **Numbers from code, words from the model.** Every figure in an alert comes from the deterministic engine; the model only phrases it. Run on a live model, all 278 synthetic alerts held this — any number the model can't source is replaced by a deterministic template.
 - **The model proposes; a person decides.** Leaf vision suggests a disease over a closed set (it cannot invent one); low confidence is never auto-diagnosed; a person confirms every candidate.
-- **It suggests, it never acts.** Opening a pump or spraying is physical and needs a named approver, and every alert and decision is recorded immutably.
+- **It suggests, it never acts.** Opening a pump or spraying is physical and needs a named approver, and every alert and decision is appended to a tamper-evident trail.
+- **Automation is bounded.** A change reaches the live demo only after its automated tests pass, and everything running in the cloud is rebuilt from code; the running demo is logged and monitored.
+- **Closed by default.** The live demo answers only invited addresses, and the model key lives in a managed vault as its single source — read under a managed identity, never kept in the repo or the pipeline. The model is given no tool that can act: it only returns text, which the rule engine and a person then check.
 
 ## The dashboard
 
